@@ -1,6 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "../src/generated/prisma/index.js"; // adjust relative path
 const prisma = new PrismaClient();
-
 async function main() {
   // Create multiple users
   await prisma.user.createMany({
@@ -8,10 +7,10 @@ async function main() {
       {
         name: "Admin User",
         email: "admin@seedsafe.com",
-        password: "admin123",  // in production, hash passwords!
+        password: "admin123", // in production, hash passwords!
         phone: "0783000000",
         role: "admin",
-        status: "active"
+        status: "active",
       },
       {
         name: "Manager User",
@@ -19,7 +18,7 @@ async function main() {
         password: "manager123",
         phone: "0783111111",
         role: "owner",
-        status: "active"
+        status: "active",
       },
       {
         name: "Delivery User",
@@ -27,7 +26,7 @@ async function main() {
         password: "delivery123",
         phone: "0783222222",
         role: "delivery",
-        status: "active"
+        status: "active",
       },
       {
         name: "Customer User",
@@ -35,16 +34,16 @@ async function main() {
         password: "customer123",
         phone: "0783333333",
         role: "customer",
-        status: "not_verified"
-      }
-    ]
+        status: "not_verified",
+      },
+    ],
   });
 
   console.log("✅ Users seeded successfully!");
 }
 
 main()
-  .catch(e => {
+  .catch((e) => {
     console.error(e);
     process.exit(1);
   })
