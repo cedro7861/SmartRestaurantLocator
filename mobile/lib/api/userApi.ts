@@ -9,6 +9,9 @@ export interface User {
   id: number;
   name: string;
   email: string;
+  role: string;
+  status: string;
+  phone?: string;
   // Add other fields as per your schema
 }
 

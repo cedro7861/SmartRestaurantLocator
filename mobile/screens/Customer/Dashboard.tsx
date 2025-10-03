@@ -11,8 +11,8 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ navigation, user,
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Customer Dashboard</Text>
-      <Text style={styles.welcome}>Welcome, {user.name}!</Text>
-      <Text style={styles.role}>Role: {user.role}</Text>
+      <Text style={styles.welcome}>Welcome, {user?.name || 'User'}!</Text>
+      <Text style={styles.role}>Role: {user?.role || 'Unknown'}</Text>
 
       <View style={styles.menu}>
         <TouchableOpacity style={styles.menuItem}>

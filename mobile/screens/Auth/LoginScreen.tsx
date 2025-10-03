@@ -8,10 +8,10 @@ import {
   Alert,
   ActivityIndicator,
 } from "react-native";
-// **ACTION REQUIRED:** You must install this library: npm install react-native-vector-icons
-import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import { MaterialCommunityIcons as Icon } from "@expo/vector-icons";
 
 import { loginUser, LoginData } from "../../lib/api/userApi";
+import { Theme } from "../../lib/colors";
 
 interface LoginScreenProps {
   navigation: any;
@@ -164,32 +164,29 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation, onLogin }) => {
   );
 };
 
-// --- Updated Styling to Match the Modern, Dark-Themed Image ---
-const DARK_BG = "#12121e"; // Deep dark background
-const INPUT_FIELD_BG = "#1f1f33"; // Slightly lighter dark for inputs/buttons
-const BRAND_COLOR = "#4db6ac"; // Teal/Mint green for the main button
-const TEXT_COLOR = "#FFFFFF"; // White text
+// --- Modern Color Theme ---
+const { colors, spacing, borderRadius, typography } = Theme;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DARK_BG,
-    paddingHorizontal: 25,
-    paddingTop: 50,
+    backgroundColor: colors.background,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xxl,
   },
   // --- Icon Styles ---
   iconContainer: {
     alignSelf: "center",
-    marginBottom: 20,
-    marginTop: 20,
+    marginBottom: spacing.lg,
+    marginTop: spacing.lg,
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: INPUT_FIELD_BG,
+    backgroundColor: colors.surface,
     justifyContent: "center",
     alignItems: "center",
     // Subtle shadow (to enhance the floating look)
-    shadowColor: "#000",
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 5,
@@ -199,97 +196,97 @@ const styles = StyleSheet.create({
   },
   // --- Title Styles ---
   appTitle: {
-    fontSize: 28,
-    fontWeight: "bold",
+    fontSize: typography.fontSize.xxl,
+    fontWeight: typography.fontWeight.bold,
     textAlign: "center",
-    color: TEXT_COLOR,
+    color: colors.text,
     lineHeight: 30,
   },
   // --- Input Styles (Base) ---
   input: {
-    backgroundColor: INPUT_FIELD_BG,
-    color: TEXT_COLOR,
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 10,
-    fontSize: 16,
+    backgroundColor: colors.surface,
+    color: colors.text,
+    padding: spacing.md,
+    borderRadius: borderRadius.lg,
+    marginBottom: spacing.sm,
+    fontSize: typography.fontSize.md,
   },
   // --- Password Specific Styles (Combined with Eye Icon) ---
   passwordContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: INPUT_FIELD_BG,
-    borderRadius: 10,
-    marginBottom: 5,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    marginBottom: spacing.xs,
   },
   passwordInput: {
     flex: 1,
-    color: TEXT_COLOR,
-    padding: 15,
-    fontSize: 16,
+    color: colors.text,
+    padding: spacing.md,
+    fontSize: typography.fontSize.md,
   },
   passwordToggle: {
-    padding: 15,
+    padding: spacing.md,
   },
   // --- Forgot Password Styles ---
   forgotPasswordButton: {
     alignSelf: "flex-end",
-    marginBottom: 25,
+    marginBottom: spacing.xl,
   },
   forgotPasswordText: {
-    color: "#8e8e93",
-    fontSize: 14,
+    color: colors.textMuted,
+    fontSize: typography.fontSize.sm,
   },
   // --- Log In Button Styles (Teal) ---
   loginButton: {
-    backgroundColor: BRAND_COLOR,
-    padding: 18,
-    borderRadius: 10,
+    backgroundColor: colors.primary,
+    padding: spacing.lg,
+    borderRadius: borderRadius.lg,
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: spacing.lg,
   },
   loginButtonText: {
-    color: DARK_BG,
-    fontSize: 18,
-    fontWeight: "bold",
+    color: colors.background,
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
   },
   // --- OR Separator ---
   orText: {
-    color: "#8e8e93",
+    color: colors.textMuted,
     textAlign: "center",
-    marginBottom: 20,
+    marginBottom: spacing.lg,
   },
   // --- Social Button Styles ---
   socialButton: {
     flexDirection: "row",
-    backgroundColor: INPUT_FIELD_BG,
-    padding: 15,
-    borderRadius: 10,
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    borderRadius: borderRadius.lg,
     alignItems: "center",
-    marginBottom: 15,
+    marginBottom: spacing.md,
   },
   socialIcon: {
-    marginRight: 10,
+    marginRight: spacing.sm,
     width: 25,
     textAlign: "center",
   },
   socialButtonText: {
     flex: 1,
-    color: TEXT_COLOR,
-    fontSize: 16,
+    color: colors.text,
+    fontSize: typography.fontSize.md,
     textAlign: "center",
     marginLeft: -35, // Adjust to center text despite the left-aligned icon
   },
   // --- Sign Up Link Styles ---
   signUpLink: {
-    marginTop: 20,
-    padding: 10,
+    marginTop: spacing.lg,
+    padding: spacing.sm,
     alignSelf: "center",
   },
   signUpText: {
-    color: BRAND_COLOR,
-    fontSize: 18,
-    fontWeight: "bold",
+    color: colors.primary,
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
   },
 });
 
