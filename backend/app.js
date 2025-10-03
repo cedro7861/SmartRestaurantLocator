@@ -2,16 +2,17 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import { PrismaClient } from "@prisma/client";
+import userRoutes from "./src/routes/userRoutes.js";
 
 dotenv.config();
 
 const app = express();
-const prisma = new PrismaClient(); // ✅ Prisma client
+const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3003;
 
 app.use(cors());
 app.use(express.json());
-
+app.use("/api/users", userRoutes);
 // Root test route
 app.get("/", (req, res) => {
   res.send("🚀 Server is running successfully!");

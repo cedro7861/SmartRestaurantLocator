@@ -1,42 +1,47 @@
 import { PrismaClient } from "../src/generated/prisma/index.js"; // adjust relative path
+import bcrypt from "bcrypt";
+
 const prisma = new PrismaClient();
+
 async function main() {
-  // Create multiple users
+  // Hash passwords before inserting
+  const users = [
+    {
+      name: "Admin User",
+      email: "admin@srl.com",
+      password: await bcrypt.hash("admin123", 10), // ✅ hashed
+      phone: "0783000000",
+      role: "admin",
+      status: "active",
+    },
+    {
+      name: "Manager User",
+      email: "manager@srl.com",
+      password: await bcrypt.hash("manager123", 10),
+      phone: "0783111111",
+      role: "owner",
+      status: "active",
+    },
+    {
+      name: "Delivery User",
+      email: "delivery@srl.com",
+      password: await bcrypt.hash("delivery123", 10),
+      phone: "0783222222",
+      role: "delivery",
+      status: "active",
+    },
+    {
+      name: "Customer User",
+      email: "customer@srl.com",
+      password: await bcrypt.hash("customer123", 10),
+      phone: "0783333333",
+      role: "customer",
+      status: "not_verified",
+    },
+  ];
+
   await prisma.user.createMany({
-    data: [
-      {
-        name: "Admin User",
-        email: "admin@seedsafe.com",
-        password: "admin123", // in production, hash passwords!
-        phone: "0783000000",
-        role: "admin",
-        status: "active",
-      },
-      {
-        name: "Manager User",
-        email: "manager@seedsafe.com",
-        password: "manager123",
-        phone: "0783111111",
-        role: "owner",
-        status: "active",
-      },
-      {
-        name: "Delivery User",
-        email: "delivery@seedsafe.com",
-        password: "delivery123",
-        phone: "0783222222",
-        role: "delivery",
-        status: "active",
-      },
-      {
-        name: "Customer User",
-        email: "customer@seedsafe.com",
-        password: "customer123",
-        phone: "0783333333",
-        role: "customer",
-        status: "not_verified",
-      },
-    ],
+    data: users,
   });
 
   console.log("✅ Users seeded successfully!");
