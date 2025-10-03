@@ -28,9 +28,12 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation, onLogin }) => {
     setLoading(true);
     try {
       const loginData: LoginData = { email, password };
+      console.log('Attempting login with:', loginData);
       const response = await loginUser(loginData);
+      console.log('Login response:', response);
       onLogin(response.user, response.token);
     } catch (error) {
+      console.log('Login error:', error);
       Alert.alert('Login Failed', 'Invalid credentials');
     } finally {
       setLoading(false);
