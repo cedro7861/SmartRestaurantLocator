@@ -44,7 +44,75 @@ async function main() {
     data: users,
   });
 
-  console.log("✅ Users seeded successfully!");
+  // Seed restaurants
+  const restaurants = [
+    {
+      owner_id: 2, // manager user
+      name: "Pizza Palace",
+      location: "Kigali, Rwanda",
+      contact_info: "+250 788 123 456",
+      latitude: -1.9441,
+      longitude: 30.0619,
+      status: "open",
+      approved: true,
+    },
+    {
+      owner_id: 2,
+      name: "Burger Joint",
+      location: "Kigali, Rwanda",
+      contact_info: "+250 788 654 321",
+      latitude: -1.9500,
+      longitude: 30.0580,
+      status: "open",
+      approved: true,
+    },
+  ];
+
+  await prisma.restaurant.createMany({
+    data: restaurants,
+  });
+
+  // Seed menu items
+  const menuItems = [
+    {
+      restaurant_id: 1,
+      name: "Margherita Pizza",
+      description: "Classic pizza with tomato sauce, mozzarella, and basil",
+      price: 15.99,
+      category: "Pizza",
+      status: true,
+    },
+    {
+      restaurant_id: 1,
+      name: "Pepperoni Pizza",
+      description: "Pizza with pepperoni, tomato sauce, and cheese",
+      price: 18.99,
+      category: "Pizza",
+      status: true,
+    },
+    {
+      restaurant_id: 2,
+      name: "Classic Burger",
+      description: "Beef patty with lettuce, tomato, and cheese",
+      price: 12.99,
+      category: "Burgers",
+      status: true,
+    },
+    {
+      restaurant_id: 2,
+      name: "Chicken Burger",
+      description: "Grilled chicken patty with mayo and veggies",
+      price: 14.99,
+      category: "Burgers",
+      status: true,
+    },
+  ];
+
+  await prisma.menuItem.createMany({
+    data: menuItems,
+  });
+
+  console.log("✅ Users, restaurants, and menu items seeded successfully!");
 }
 
 main()

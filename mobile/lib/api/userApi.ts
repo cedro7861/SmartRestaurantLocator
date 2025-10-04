@@ -6,7 +6,7 @@ const api = axios.create({
 });
 
 export interface User {
-  id: number;
+  user_id: number;
   name: string;
   email: string;
   role: string;
@@ -21,6 +21,7 @@ export interface CreateUserData {
   password: string;
   phone?: string;
   role?: string;
+  status?: string;
 }
 
 export interface LoginData {

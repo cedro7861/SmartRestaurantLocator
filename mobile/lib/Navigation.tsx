@@ -6,8 +6,14 @@ import LoginScreen from '../screens/Auth/LoginScreen';
 import RegisterScreen from '../screens/Auth/RegisterScreen';
 import { AdminDashboard, UserManagement } from '../screens/Admin';
 import { OwnerDashboard } from '../screens/Owner';
+import AddRestaurant from '../screens/Owner/AddRestaurant';
+import ViewRestaurants from '../screens/Owner/ViewRestaurants';
+import EditRestaurant from '../screens/Owner/EditRestaurant';
+import AddMenuItem from '../screens/Owner/AddMenuItem';
+import ManageOrders from '../screens/Owner/ManageOrders';
 import { DeliveryDashboard } from '../screens/Delivery';
 import { CustomerDashboard } from '../screens/Customer';
+import RestaurantDetail from '../screens/Customer/RestaurantDetail';
 
 const AuthStack = createStackNavigator();
 const AdminStack = createStackNavigator();
@@ -34,6 +40,11 @@ const OwnerNavigator = () => {
       <OwnerStack.Screen name="OwnerDashboard">
         {(props: any) => <OwnerDashboard {...props} user={user} onLogout={logout} />}
       </OwnerStack.Screen>
+      <OwnerStack.Screen name="AddRestaurant" component={AddRestaurant} />
+      <OwnerStack.Screen name="ViewRestaurants" component={ViewRestaurants} />
+      <OwnerStack.Screen name="EditRestaurant" component={EditRestaurant} />
+      <OwnerStack.Screen name="AddMenuItem" component={AddMenuItem} />
+      <OwnerStack.Screen name="ManageOrders" component={ManageOrders} />
     </OwnerStack.Navigator>
   );
 };
@@ -56,6 +67,7 @@ const CustomerNavigator = () => {
       <CustomerStack.Screen name="CustomerDashboard">
         {(props: any) => <CustomerDashboard {...props} user={user} onLogout={logout} />}
       </CustomerStack.Screen>
+      <CustomerStack.Screen name="RestaurantDetail" component={RestaurantDetail} />
     </CustomerStack.Navigator>
   );
 };

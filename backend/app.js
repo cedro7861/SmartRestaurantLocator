@@ -3,6 +3,9 @@ import dotenv from "dotenv";
 import cors from "cors";
 import { PrismaClient } from "@prisma/client";
 import userRoutes from "./src/routes/userRoutes.js";
+import restaurantRoutes from "./src/routes/restaurantRoutes.js";
+import menuRoutes from "./src/routes/menuRoutes.js";
+import orderRoutes from "./src/routes/orderRoutes.js";
 
 dotenv.config();
 
@@ -13,6 +16,9 @@ const PORT = process.env.PORT || 3003;
 app.use(cors());
 app.use(express.json());
 app.use("/api/users", userRoutes);
+app.use("/api/restaurants", restaurantRoutes);
+app.use("/api/menu", menuRoutes);
+app.use("/api/orders", orderRoutes);
 // Root test route
 app.get("/", (req, res) => {
   res.send("🚀 Server is running successfully!");
@@ -28,6 +34,6 @@ app.get("/users", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server is running on http://0.0.0.0:${PORT}`);
 });

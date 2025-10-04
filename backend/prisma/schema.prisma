@@ -8,14 +8,16 @@ datasource db {
 }
 
 model User {
-  user_id    Int      @id @default(autoincrement())
-  name       String
-  email      String   @unique
-  password   String
-  phone      String?  // nullable since not required
-  role       Role     @default(customer)
-  status     Status   @default(not_verified)
-  created_at DateTime @default(now())
+  user_id     Int           @id @default(autoincrement())
+  name        String
+  email       String        @unique
+  password    String
+  phone       String?       // nullable since not required
+  role        Role          @default(customer)
+  status      Status        @default(not_verified)
+  created_at  DateTime      @default(now())
+  restaurants Restaurant[]
+  orders      Order[]
 }
 
 enum Role {
@@ -29,4 +31,73 @@ enum Status {
   active
   inactive
   not_verified
+}
+
+enum RestaurantStatus {
+  open
+  closed
+}
+
+enum OrderStatus {
+  pending
+  confirmed
+  preparing
+  ready
+  delivering
+  delivered
+  cancelled
+  rejected
+}
+
+model Restaurant {
+  id           Int              @id @default(autoincrement())
+  owner_id     Int
+  name         String
+  location     String?
+  contact_info String?
+  latitude     Decimal?         @db.Decimal(10, 7)
+  longitude    Decimal?         @db.Decimal(10, 7)
+  image        String?
+  status       RestaurantStatus @default(closed)
+  approved     Boolean          @default(false)
+  created_at   DateTime         @default(now())
+  owner        User             @relation(fields: [owner_id], references: [user_id], onDelete: Cascade)
+  menu_items   MenuItem[]
+  orders       Order[]
+}
+
+model MenuItem {
+  id            Int       @id @default(autoincrement())
+  restaurant_id Int
+  name          String
+  category      String?
+  description   String?
+  price         Decimal   @db.Decimal(10, 2)
+  image         String?
+  status        Boolean   @default(true)
+  created_at    DateTime  @default(now())
+  restaurant    Restaurant @relation(fields: [restaurant_id], references: [id], onDelete: Cascade)
+  order_items   OrderItem[]
+}
+
+model Order {
+  id            Int         @id @default(autoincrement())
+  customer_id   Int
+  restaurant_id Int
+  total_price   Decimal     @db.Decimal(10, 2)
+  status        OrderStatus @default(pending)
+  order_time    DateTime    @default(now())
+  customer      User        @relation(fields: [customer_id], references: [user_id])
+  restaurant    Restaurant  @relation(fields: [restaurant_id], references: [id])
+  order_items   OrderItem[]
+}
+
+model OrderItem {
+  id           Int      @id @default(autoincrement())
+  order_id     Int
+  item_id      Int
+  quantity     Int
+  preferences  String?
+  order        Order    @relation(fields: [order_id], references: [id])
+  item         MenuItem @relation(fields: [item_id], references: [id])
 }
