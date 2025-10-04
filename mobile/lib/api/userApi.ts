@@ -1,8 +1,18 @@
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import API_BASE_URL from './apiConfig';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
+});
+
+// Add auth token to requests
+api.interceptors.request.use(async (config) => {
+  const token = await AsyncStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
 });
 
 export interface User {
@@ -55,5 +65,22 @@ export const deleteUser = async (id: number): Promise<void> => {
 
 export const loginUser = async (loginData: LoginData): Promise<any> => {
   const response = await api.post('/users/login', loginData);
+  return response.data;
+};
+
+export const updateProfile = async (data: {
+  name?: string;
+  email?: string;
+  phone?: string;
+}): Promise<any> => {
+  const response = await api.put('/users/profile', data);
+  return response.data;
+};
+
+export const changePassword = async (data: {
+  currentPassword: string;
+  newPassword: string;
+}): Promise<any> => {
+  const response = await api.put('/users/change-password', data);
   return response.data;
 };

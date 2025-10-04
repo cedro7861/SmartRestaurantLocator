@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert, TextInput, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Theme } from '../../lib/colors';
-import { getUsers, User } from '../../lib/api/userApi';
+import { getUsers, User, changePassword } from '../../lib/api/userApi';
 import { getAllRestaurants, approveRestaurant, rejectRestaurant, Restaurant } from '../../lib/api/restaurantApi';
+import { getAllOrders, updateOrderStatus, Order } from '../../lib/api/orderApi';
 
 interface AdminDashboardProps {
   navigation: any;
@@ -16,13 +17,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigation, user, onLog
   const [activeTab, setActiveTab] = useState('Users');
   const [users, setUsers] = useState<User[]>([]);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
   const tabs = [
-    { name: 'Users', icon: 'people' },
+    { name: 'Users', icon: 'people', screen: 'UserManagement' },
     { name: 'Restaurants', icon: 'restaurant' },
     { name: 'Orders', icon: 'clipboard' },
     { name: 'Settings', icon: 'settings' },
@@ -33,6 +35,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigation, user, onLog
       loadUsers();
     } else if (activeTab === 'Restaurants') {
       loadRestaurants();
+    } else if (activeTab === 'Orders') {
+      loadOrders();
     }
   }, [activeTab]);
 
@@ -55,6 +59,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigation, user, onLog
       setRestaurants(restaurantData);
     } catch (error) {
       Alert.alert('Error', 'Failed to load restaurants');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadOrders = async () => {
+    setLoading(true);
+    try {
+      const orderData = await getAllOrders();
+      setOrders(orderData);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to load orders');
     } finally {
       setLoading(false);
     }
@@ -93,6 +109,43 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigation, user, onLog
     );
   };
 
+  const handleUpdateOrderStatus = async (order: Order, newStatus: string) => {
+    try {
+      await updateOrderStatus(order.id, newStatus);
+      Alert.alert('Success', `Order status updated to ${newStatus}`);
+      loadOrders(); // Refresh the list
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update order status');
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      Alert.alert('Error', 'Please fill in all password fields');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      Alert.alert('Error', 'New password and confirmation do not match');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      Alert.alert('Error', 'New password must be at least 6 characters long');
+      return;
+    }
+
+    try {
+      await changePassword({ currentPassword, newPassword });
+      Alert.alert('Success', 'Password changed successfully');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to change password');
+    }
+  };
+
   const renderUser = ({ item }: { item: User }) => (
     <View style={[styles.userCard, { backgroundColor: colors.surface }]}>
       <Text style={[styles.userName, { color: colors.text }]}>{item.name}</Text>
@@ -104,6 +157,71 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigation, user, onLog
       }]}>
         {item.role}
       </Text>
+    </View>
+  );
+
+  const renderOrder = ({ item }: { item: Order }) => (
+    <View style={[styles.orderCard, { backgroundColor: colors.surface }]}>
+      <View style={styles.orderHeader}>
+        <Text style={[styles.orderId, { color: colors.text }]}>Order #{item.id}</Text>
+        <View style={styles.statusContainer}>
+          <Text style={[styles.orderStatus, {
+            color: item.status === 'delivered' ? colors.success :
+                   item.status === 'preparing' ? colors.warning :
+                   item.status === 'pending' ? colors.primary : colors.error,
+            backgroundColor: item.status === 'delivered' ? colors.success + '20' :
+                           item.status === 'preparing' ? colors.warning + '20' :
+                           item.status === 'pending' ? colors.primary + '20' : colors.error + '20'
+          }]}>
+            {item.status}
+          </Text>
+        </View>
+      </View>
+
+      <Text style={[styles.customerInfo, { color: colors.textSecondary }]}>
+        Customer: {item.customer?.name} ({item.customer?.email})
+      </Text>
+      <Text style={[styles.restaurantInfo, { color: colors.textSecondary }]}>
+        Restaurant: {item.restaurant.name}
+      </Text>
+      <Text style={[styles.orderTime, { color: colors.textSecondary }]}>
+        {new Date(item.order_time).toLocaleString()}
+      </Text>
+      <Text style={[styles.orderTotal, { color: colors.primary }]}>
+        Total: ${item.total_price}
+      </Text>
+      <Text style={[styles.orderItems, { color: colors.textSecondary }]}>
+        Items: {item.order_items.length}
+      </Text>
+
+      {item.status !== 'delivered' && (
+        <View style={styles.orderActions}>
+          {item.status === 'pending' && (
+            <TouchableOpacity
+              style={[styles.statusButton, { backgroundColor: colors.warning }]}
+              onPress={() => handleUpdateOrderStatus(item, 'preparing')}
+            >
+              <Text style={[styles.buttonText, { color: colors.background }]}>Start Preparing</Text>
+            </TouchableOpacity>
+          )}
+          {item.status === 'preparing' && (
+            <TouchableOpacity
+              style={[styles.statusButton, { backgroundColor: colors.success }]}
+              onPress={() => handleUpdateOrderStatus(item, 'ready')}
+            >
+              <Text style={[styles.buttonText, { color: colors.background }]}>Mark Ready</Text>
+            </TouchableOpacity>
+          )}
+          {item.status === 'ready' && (
+            <TouchableOpacity
+              style={[styles.statusButton, { backgroundColor: colors.primary }]}
+              onPress={() => handleUpdateOrderStatus(item, 'delivered')}
+            >
+              <Text style={[styles.buttonText, { color: colors.background }]}>Mark Delivered</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
     </View>
   );
 
@@ -200,7 +318,36 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigation, user, onLog
           </View>
         );
       case 'Orders':
-        return <Text style={[styles.placeholderText, { color: colors.text }]}>Monitor Customer Orders - Coming Soon</Text>;
+        return loading ? (
+          <Text style={[styles.loadingText, { color: colors.text }]}>Loading orders...</Text>
+        ) : (
+          <View>
+            <View style={styles.restaurantStats}>
+              <View style={styles.statCard}>
+                <Text style={[styles.statNumber, { color: colors.primary }]}>{orders.length}</Text>
+                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total Orders</Text>
+              </View>
+              <View style={styles.statCard}>
+                <Text style={[styles.statNumber, { color: colors.warning }]}>
+                  {orders.filter(o => o.status === 'pending').length}
+                </Text>
+                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Pending</Text>
+              </View>
+              <View style={styles.statCard}>
+                <Text style={[styles.statNumber, { color: colors.success }]}>
+                  {orders.filter(o => o.status === 'delivered').length}
+                </Text>
+                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Delivered</Text>
+              </View>
+            </View>
+            <FlatList
+              data={orders}
+              renderItem={renderOrder}
+              keyExtractor={(item) => item.id.toString()}
+              contentContainerStyle={styles.listContainer}
+            />
+          </View>
+        );
       case 'Settings':
         return (
           <View style={styles.settingsContainer}>
@@ -229,7 +376,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigation, user, onLog
               value={confirmPassword}
               onChangeText={setConfirmPassword}
             />
-            <TouchableOpacity style={[styles.button, { backgroundColor: colors.primary }]}>
+            <TouchableOpacity
+              style={[styles.button, { backgroundColor: colors.primary }]}
+              onPress={handleChangePassword}
+            >
               <Text style={[styles.buttonText, { color: colors.background }]}>Change Password</Text>
             </TouchableOpacity>
           </View>
@@ -250,7 +400,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigation, user, onLog
           <TouchableOpacity
             key={tab.name}
             style={[styles.tab, activeTab === tab.name && styles.activeTab]}
-            onPress={() => setActiveTab(tab.name)}
+            onPress={() => {
+              if (tab.screen) {
+                navigation.navigate(tab.screen);
+              } else {
+                setActiveTab(tab.name);
+              }
+            }}
           >
             <Ionicons name={tab.icon as any} size={24} color={activeTab === tab.name ? colors.background : colors.textSecondary} />
             <Text style={[styles.tabText, activeTab === tab.name && styles.activeTabText]}>{tab.name}</Text>
@@ -495,6 +651,62 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: Theme.spacing.xs,
     justifyContent: 'center',
+  },
+  orderCard: {
+    padding: Theme.spacing.md,
+    marginBottom: Theme.spacing.sm,
+    borderRadius: Theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: Theme.colors.border,
+  },
+  orderHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: Theme.spacing.xs,
+  },
+  orderId: {
+    fontSize: Theme.typography.fontSize.lg,
+    fontWeight: Theme.typography.fontWeight.bold,
+  },
+  orderStatus: {
+    fontSize: Theme.typography.fontSize.xs,
+    fontWeight: Theme.typography.fontWeight.medium,
+    paddingHorizontal: Theme.spacing.sm,
+    paddingVertical: Theme.spacing.xs,
+    borderRadius: Theme.borderRadius.sm,
+    textTransform: 'uppercase',
+  },
+  customerInfo: {
+    fontSize: Theme.typography.fontSize.sm,
+    marginBottom: Theme.spacing.xs,
+  },
+  restaurantInfo: {
+    fontSize: Theme.typography.fontSize.sm,
+    marginBottom: Theme.spacing.xs,
+  },
+  orderTime: {
+    fontSize: Theme.typography.fontSize.sm,
+    marginBottom: Theme.spacing.xs,
+  },
+  orderTotal: {
+    fontSize: Theme.typography.fontSize.md,
+    fontWeight: Theme.typography.fontWeight.bold,
+    marginBottom: Theme.spacing.xs,
+  },
+  orderItems: {
+    fontSize: Theme.typography.fontSize.sm,
+    marginBottom: Theme.spacing.sm,
+  },
+  orderActions: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  statusButton: {
+    padding: Theme.spacing.sm,
+    borderRadius: Theme.borderRadius.sm,
+    alignItems: 'center',
+    minWidth: 100,
   },
 });
 

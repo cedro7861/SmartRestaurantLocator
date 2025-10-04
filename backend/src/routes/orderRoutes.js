@@ -1,7 +1,11 @@
 import express from "express";
+import { authenticateToken, requireRole } from "../middleware/auth.js";
 import {
   getCustomerOrders,
   getOwnerOrders,
+  getAllOrders,
+  getAvailableDeliveries,
+  getDeliveryHistory,
   createOrder,
   updateOrderStatus,
 } from "../controllers/orderController.js";
@@ -9,11 +13,18 @@ import {
 const router = express.Router();
 
 // Customer routes
-router.get("/customer", getCustomerOrders);
-router.post("/", createOrder);
+router.get("/customer", authenticateToken, getCustomerOrders);
+router.post("/", authenticateToken, createOrder);
 
 // Owner routes
-router.get("/owner", getOwnerOrders);
-router.put("/:id/status", updateOrderStatus);
+router.get("/owner", authenticateToken, requireRole(['owner']), getOwnerOrders);
+router.put("/:id/status", authenticateToken, requireRole(['owner']), updateOrderStatus);
+
+// Admin routes
+router.get("/admin", authenticateToken, requireRole(['admin']), getAllOrders);
+
+// Delivery routes
+router.get("/delivery/available", authenticateToken, requireRole(['delivery']), getAvailableDeliveries);
+router.get("/delivery/history", authenticateToken, requireRole(['delivery']), getDeliveryHistory);
 
 export default router;

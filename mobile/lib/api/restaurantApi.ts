@@ -1,8 +1,18 @@
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import API_BASE_URL from './apiConfig';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
+});
+
+// Add auth token to requests
+api.interceptors.request.use(async (config) => {
+  const token = await AsyncStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
 });
 
 export interface Restaurant {
@@ -11,8 +21,8 @@ export interface Restaurant {
   name: string;
   location?: string;
   contact_info?: string;
-  latitude?: number;
-  longitude?: number;
+  latitude?: string;
+  longitude?: string;
   image?: string;
   status: string;
   approved: boolean;

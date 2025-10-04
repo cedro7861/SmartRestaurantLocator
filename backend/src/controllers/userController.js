@@ -116,6 +116,79 @@ export const updateUser = async (req, res) => {
   }
 };
 
+// 📌 Update profile
+export const updateProfile = async (req, res) => {
+  try {
+    const userId = req.user.id; // Assuming auth middleware
+    const { name, email, phone } = req.body;
+
+    // Check if email is already taken by another user
+    if (email) {
+      const existingUser = await prisma.user.findUnique({
+        where: { email },
+      });
+
+      if (existingUser && existingUser.user_id !== userId) {
+        return res.status(400).json({ error: "Email is already in use" });
+      }
+    }
+
+    // Update profile
+    const updatedUser = await prisma.user.update({
+      where: { user_id: userId },
+      data: { name, email, phone },
+      select: {
+        user_id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        status: true,
+      },
+    });
+
+    res.json({ message: "Profile updated successfully", user: updatedUser });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to update profile" });
+  }
+};
+
+// 📌 Change password
+export const changePassword = async (req, res) => {
+  try {
+    const userId = req.user.id; // Assuming auth middleware
+    const { currentPassword, newPassword } = req.body;
+
+    // Get current user
+    const user = await prisma.user.findUnique({
+      where: { user_id: userId },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Verify current password
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ error: "Current password is incorrect" });
+    }
+
+    // Hash new password
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    await prisma.user.update({
+      where: { user_id: userId },
+      data: { password: hashedNewPassword },
+    });
+
+    res.json({ message: "Password changed successfully" });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to change password" });
+  }
+};
+
 // 📌 Delete user
 export const deleteUser = async (req, res) => {
   try {

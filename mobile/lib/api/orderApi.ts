@@ -1,8 +1,18 @@
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import API_BASE_URL from './apiConfig';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
+});
+
+// Add auth token to requests
+api.interceptors.request.use(async (config) => {
+  const token = await AsyncStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
 });
 
 export interface OrderItem {
@@ -61,5 +71,20 @@ export const createOrder = async (data: {
 
 export const updateOrderStatus = async (id: number, status: string): Promise<Order> => {
   const response = await api.put(`/orders/${id}/status`, { status });
+  return response.data;
+};
+
+export const getAllOrders = async (): Promise<Order[]> => {
+  const response = await api.get('/orders/admin');
+  return response.data;
+};
+
+export const getAvailableDeliveries = async (): Promise<Order[]> => {
+  const response = await api.get('/orders/delivery/available');
+  return response.data;
+};
+
+export const getDeliveryHistory = async (): Promise<Order[]> => {
+  const response = await api.get('/orders/delivery/history');
   return response.data;
 };

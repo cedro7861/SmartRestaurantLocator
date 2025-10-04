@@ -1,4 +1,5 @@
 import express from "express";
+import { authenticateToken, requireRole } from "../middleware/auth.js";
 import {
   getRestaurants,
   getAllRestaurants,
@@ -18,14 +19,14 @@ router.get("/", getRestaurants);
 router.get("/:id", getRestaurantById);
 
 // Admin routes
-router.get("/admin/all", getAllRestaurants);
-router.put("/:id/approve", approveRestaurant);
-router.put("/:id/reject", rejectRestaurant);
+router.get("/admin/all", authenticateToken, requireRole(['admin']), getAllRestaurants);
+router.put("/:id/approve", authenticateToken, requireRole(['admin']), approveRestaurant);
+router.put("/:id/reject", authenticateToken, requireRole(['admin']), rejectRestaurant);
 
 // Owner routes
-router.get("/owner/:owner_id", getOwnerRestaurants);
-router.post("/", createRestaurant);
-router.put("/:id", updateRestaurant);
-router.delete("/:id", deleteRestaurant);
+router.get("/owner/:owner_id", authenticateToken, requireRole(['owner']), getOwnerRestaurants);
+router.post("/", authenticateToken, requireRole(['owner']), createRestaurant);
+router.put("/:id", authenticateToken, requireRole(['owner']), updateRestaurant);
+router.delete("/:id", authenticateToken, requireRole(['owner']), deleteRestaurant);
 
 export default router;

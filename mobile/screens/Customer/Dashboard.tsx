@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TextInput } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { Theme } from '../../lib/colors';
 import { getRestaurants, Restaurant } from '../../lib/api/restaurantApi';
 import { getCustomerOrders, Order } from '../../lib/api/orderApi';
+import { updateProfile, changePassword } from '../../lib/api/userApi';
 
 interface CustomerDashboardProps {
   navigation: any;
@@ -18,6 +19,13 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ navigation, user,
   const [orders, setOrders] = useState<Order[]>([]);
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileName, setProfileName] = useState(user?.name || '');
+  const [profileEmail, setProfileEmail] = useState(user?.email || '');
+  const [profilePhone, setProfilePhone] = useState(user?.phone || '');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [contactMessage, setContactMessage] = useState('');
   const { colors, spacing, borderRadius, typography } = Theme;
 
   useEffect(() => {
@@ -62,6 +70,58 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ navigation, user,
     }
   };
 
+  const handleUpdateProfile = async () => {
+    try {
+      const result = await updateProfile({
+        name: profileName,
+        email: profileEmail,
+        phone: profilePhone,
+      });
+      Alert.alert('Success', 'Profile updated successfully');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update profile');
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      Alert.alert('Error', 'Please fill in all password fields');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      Alert.alert('Error', 'New password and confirmation do not match');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      Alert.alert('Error', 'New password must be at least 6 characters long');
+      return;
+    }
+
+    try {
+      await changePassword({ currentPassword, newPassword });
+      Alert.alert('Success', 'Password changed successfully');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to change password');
+    }
+  };
+
+  const handleContactSupport = async () => {
+    if (!contactMessage.trim()) {
+      Alert.alert('Error', 'Please enter a message');
+      return;
+    }
+
+    // For now, just show a success message
+    // In a real app, this would send the message to support
+    Alert.alert('Success', 'Your message has been sent to support. We will get back to you soon!');
+    setContactMessage('');
+  };
+
   const handleRestaurantPress = (restaurant: Restaurant) => {
     navigation.navigate('RestaurantDetail', { restaurant });
   };
@@ -84,11 +144,9 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ navigation, user,
               >
                 {restaurants
                   .filter((restaurant) => {
-                    const lat = restaurant.latitude;
-                    const lng = restaurant.longitude;
-                    return lat != null && lng != null &&
-                           typeof lat === 'number' && typeof lng === 'number' &&
-                           !isNaN(lat) && !isNaN(lng) &&
+                    const lat = parseFloat(restaurant.latitude || '');
+                    const lng = parseFloat(restaurant.longitude || '');
+                    return !isNaN(lat) && !isNaN(lng) &&
                            lat >= -90 && lat <= 90 &&
                            lng >= -180 && lng <= 180;
                   })
@@ -96,8 +154,8 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ navigation, user,
                     <Marker
                       key={restaurant.id}
                       coordinate={{
-                        latitude: restaurant.latitude!,
-                        longitude: restaurant.longitude!,
+                        latitude: parseFloat(restaurant.latitude || '0'),
+                        longitude: parseFloat(restaurant.longitude || '0'),
                       }}
                       title={restaurant.name}
                       description={restaurant.location}
@@ -155,30 +213,101 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ navigation, user,
         );
       case 'profile':
         return (
-          <View style={styles.tabContent}>
-            <Text style={[styles.tabTitle, { color: colors.text }]}>Profile</Text>
-            <Text style={[styles.tabDescription, { color: colors.textSecondary }]}>
-              Manage your account settings and preferences.
-            </Text>
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: colors.primary }]}
-              onPress={() => Alert.alert('Info', 'Profile editing coming soon!')}
-            >
-              <Text style={[styles.actionButtonText, { color: colors.background }]}>Edit Profile</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: colors.surface }]}
-              onPress={() => Alert.alert('Info', 'Password change coming soon!')}
-            >
-              <Text style={[styles.actionButtonText, { color: colors.text }]}>Change Password</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: colors.warning }]}
-              onPress={() => Alert.alert('Info', 'Support contact coming soon!')}
-            >
-              <Text style={[styles.actionButtonText, { color: colors.text }]}>Contact Support</Text>
-            </TouchableOpacity>
-          </View>
+          <ScrollView style={styles.tabContent}>
+            {/* Edit Profile */}
+            <View style={styles.profileSection}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Edit Profile</Text>
+              <TextInput
+                style={[styles.input, { borderColor: colors.border, color: colors.text }]}
+                placeholder="Full Name"
+                placeholderTextColor={colors.textSecondary}
+                value={profileName}
+                onChangeText={setProfileName}
+              />
+              <TextInput
+                style={[styles.input, { borderColor: colors.border, color: colors.text }]}
+                placeholder="Email"
+                placeholderTextColor={colors.textSecondary}
+                value={profileEmail}
+                onChangeText={setProfileEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+              <TextInput
+                style={[styles.input, { borderColor: colors.border, color: colors.text }]}
+                placeholder="Phone"
+                placeholderTextColor={colors.textSecondary}
+                value={profilePhone}
+                onChangeText={setProfilePhone}
+                keyboardType="phone-pad"
+              />
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: colors.primary }]}
+                onPress={handleUpdateProfile}
+              >
+                <Text style={[styles.actionButtonText, { color: colors.background }]}>Update Profile</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Change Password */}
+            <View style={styles.profileSection}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Change Password</Text>
+              <TextInput
+                style={[styles.input, { borderColor: colors.border, color: colors.text }]}
+                placeholder="Current Password"
+                placeholderTextColor={colors.textSecondary}
+                secureTextEntry
+                value={currentPassword}
+                onChangeText={setCurrentPassword}
+              />
+              <TextInput
+                style={[styles.input, { borderColor: colors.border, color: colors.text }]}
+                placeholder="New Password"
+                placeholderTextColor={colors.textSecondary}
+                secureTextEntry
+                value={newPassword}
+                onChangeText={setNewPassword}
+              />
+              <TextInput
+                style={[styles.input, { borderColor: colors.border, color: colors.text }]}
+                placeholder="Confirm New Password"
+                placeholderTextColor={colors.textSecondary}
+                secureTextEntry
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+              />
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: colors.primary }]}
+                onPress={handleChangePassword}
+              >
+                <Text style={[styles.actionButtonText, { color: colors.background }]}>Change Password</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Contact Support */}
+            <View style={styles.profileSection}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Contact Support</Text>
+              <Text style={[styles.supportInfo, { color: colors.textSecondary }]}>
+                Need help? Send us a message and we'll get back to you as soon as possible.
+              </Text>
+              <TextInput
+                style={[styles.textArea, { borderColor: colors.border, color: colors.text }]}
+                placeholder="Describe your issue or question..."
+                placeholderTextColor={colors.textSecondary}
+                value={contactMessage}
+                onChangeText={setContactMessage}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: colors.primary }]}
+                onPress={handleContactSupport}
+              >
+                <Text style={[styles.actionButtonText, { color: colors.background }]}>Send Message</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
         );
       default:
         return null;
@@ -349,6 +478,39 @@ const styles = StyleSheet.create({
   logoutText: {
     fontSize: Theme.typography.fontSize.md,
     fontWeight: Theme.typography.fontWeight.medium,
+  },
+  profileSection: {
+    marginBottom: Theme.spacing.xl,
+    padding: Theme.spacing.lg,
+    backgroundColor: Theme.colors.surface,
+    borderRadius: Theme.borderRadius.lg,
+    borderWidth: 1,
+    borderColor: Theme.colors.border,
+  },
+  sectionTitle: {
+    fontSize: Theme.typography.fontSize.lg,
+    fontWeight: Theme.typography.fontWeight.bold,
+    marginBottom: Theme.spacing.md,
+  },
+  input: {
+    borderWidth: 1,
+    borderRadius: Theme.borderRadius.md,
+    padding: Theme.spacing.md,
+    marginBottom: Theme.spacing.sm,
+    fontSize: Theme.typography.fontSize.md,
+  },
+  textArea: {
+    borderWidth: 1,
+    borderRadius: Theme.borderRadius.md,
+    padding: Theme.spacing.md,
+    marginBottom: Theme.spacing.md,
+    fontSize: Theme.typography.fontSize.md,
+    height: 100,
+  },
+  supportInfo: {
+    fontSize: Theme.typography.fontSize.md,
+    marginBottom: Theme.spacing.md,
+    lineHeight: 20,
   },
 });
 

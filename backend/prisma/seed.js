@@ -1,4 +1,4 @@
-import { PrismaClient } from "../src/generated/prisma/index.js"; // adjust relative path
+import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();

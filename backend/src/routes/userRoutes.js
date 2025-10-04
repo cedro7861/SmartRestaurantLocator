@@ -1,4 +1,5 @@
 import express from "express";
+import { authenticateToken, requireRole } from "../middleware/auth.js";
 import {
   getUsers,
   getUserById,
@@ -6,17 +7,25 @@ import {
   updateUser,
   deleteUser,
   loginUser,
+  updateProfile,
+  changePassword,
 } from "../controllers/userController.js";
 
 const router = express.Router();
 
-router.get("/", getUsers);
-router.get("/:id", getUserById);
+router.get("/", authenticateToken, requireRole(['admin']), getUsers);
+router.get("/:id", authenticateToken, getUserById);
 router.post("/", createUser);
-router.put("/:id", updateUser);
-router.delete("/:id", deleteUser);
+router.put("/:id", authenticateToken, requireRole(['admin']), updateUser);
+router.delete("/:id", authenticateToken, requireRole(['admin']), deleteUser);
 
 // 📌 Login route
 router.post("/login", loginUser);
+
+// 📌 Profile routes
+router.put("/profile", authenticateToken, updateProfile);
+
+// 📌 Change password route
+router.put("/change-password", authenticateToken, changePassword);
 
 export default router;

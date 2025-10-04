@@ -106,6 +106,83 @@ export const createOrder = async (req, res) => {
   }
 };
 
+// 📌 Get all orders (Admin only)
+export const getAllOrders = async (req, res) => {
+  try {
+    const orders = await prisma.order.findMany({
+      include: {
+        customer: {
+          select: { name: true, email: true, phone: true }
+        },
+        restaurant: {
+          select: { name: true, location: true }
+        },
+        order_items: {
+          include: {
+            item: true
+          }
+        }
+      },
+      orderBy: { order_time: 'desc' }
+    });
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch orders" });
+  }
+};
+
+// 📌 Get available deliveries (orders ready for delivery)
+export const getAvailableDeliveries = async (req, res) => {
+  try {
+    const orders = await prisma.order.findMany({
+      where: { status: 'ready' },
+      include: {
+        customer: {
+          select: { name: true, email: true, phone: true }
+        },
+        restaurant: {
+          select: { name: true, location: true }
+        },
+        order_items: {
+          include: {
+            item: true
+          }
+        }
+      },
+      orderBy: { order_time: 'asc' }
+    });
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch available deliveries" });
+  }
+};
+
+// 📌 Get delivery history (delivered orders)
+export const getDeliveryHistory = async (req, res) => {
+  try {
+    const orders = await prisma.order.findMany({
+      where: { status: 'delivered' },
+      include: {
+        customer: {
+          select: { name: true, email: true, phone: true }
+        },
+        restaurant: {
+          select: { name: true, location: true }
+        },
+        order_items: {
+          include: {
+            item: true
+          }
+        }
+      },
+      orderBy: { order_time: 'desc' }
+    });
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch delivery history" });
+  }
+};
+
 // 📌 Update order status
 export const updateOrderStatus = async (req, res) => {
   try {
