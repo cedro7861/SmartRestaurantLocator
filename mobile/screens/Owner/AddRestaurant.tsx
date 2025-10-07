@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Theme } from '../../lib/colors';
 import { createRestaurant } from '../../lib/api/restaurantApi';
+import { useAuth } from '../../lib/AuthContext';
 
 interface AddRestaurantProps {
   navigation: any;
@@ -17,6 +18,7 @@ interface AddRestaurantProps {
 }
 
 const AddRestaurant: React.FC<AddRestaurantProps> = ({ navigation }) => {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     location: '',
@@ -60,7 +62,7 @@ const AddRestaurant: React.FC<AddRestaurantProps> = ({ navigation }) => {
         latitude: formData.latitude || undefined,
         longitude: formData.longitude || undefined,
         image: formData.image.trim() || undefined,
-        owner_id: 2, // Default to manager user for now
+        owner_id: user?.id,
       });
       Alert.alert('Success', 'Restaurant added successfully!', [
         { text: 'OK', onPress: () => navigation.goBack() }

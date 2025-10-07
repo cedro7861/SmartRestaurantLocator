@@ -60,8 +60,14 @@ export const getOwnerOrders = async (req, res) => {
 // 📌 Create order
 export const createOrder = async (req, res) => {
   try {
-    const { restaurant_id, items } = req.body;
+    const { restaurant_id, items, order_type } = req.body;
     const customerId = req.user.id;
+
+    // Validate order type
+    const validOrderTypes = ['pickup', 'delivery', 'dine_in'];
+    if (!order_type || !validOrderTypes.includes(order_type)) {
+      return res.status(400).json({ error: "Invalid order type. Must be 'pickup', 'delivery', or 'dine_in'" });
+    }
 
     // Calculate total price
     let totalPrice = 0;
@@ -87,6 +93,7 @@ export const createOrder = async (req, res) => {
         customer_id: customerId,
         restaurant_id: restaurant_id,
         total_price: totalPrice,
+        order_type: order_type,
         order_items: {
           create: orderItems
         }
@@ -157,26 +164,36 @@ export const getAvailableDeliveries = async (req, res) => {
   }
 };
 
-// 📌 Get delivery history (delivered orders)
+// 📌 Get delivery history (delivered orders for the delivery person)
 export const getDeliveryHistory = async (req, res) => {
   try {
-    const orders = await prisma.order.findMany({
-      where: { status: 'delivered' },
+    const deliveryPersonId = req.user.id;
+    const deliveries = await prisma.delivery.findMany({
+      where: {
+        delivery_person_id: deliveryPersonId,
+        status: 'delivered'
+      },
       include: {
-        customer: {
-          select: { name: true, email: true, phone: true }
-        },
-        restaurant: {
-          select: { name: true, location: true }
-        },
-        order_items: {
+        order: {
           include: {
-            item: true
+            customer: {
+              select: { name: true, email: true, phone: true }
+            },
+            restaurant: {
+              select: { name: true, location: true }
+            },
+            order_items: {
+              include: {
+                item: true
+              }
+            }
           }
         }
       },
-      orderBy: { order_time: 'desc' }
+      orderBy: { order: { order_time: 'desc' } }
     });
+
+    const orders = deliveries.map(d => d.order);
     res.json(orders);
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch delivery history" });

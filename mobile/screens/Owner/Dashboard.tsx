@@ -53,7 +53,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ navigation, user, onLog
   const loadMenuItems = async () => {
     setLoadingMenu(true);
     try {
-      const data = await getOwnerMenuItems(2); // Hardcoded for now
+      const data = await getOwnerMenuItems(user?.id);
       setMenuItems(data);
     } catch (error) {
       Alert.alert('Error', 'Failed to load menu items');

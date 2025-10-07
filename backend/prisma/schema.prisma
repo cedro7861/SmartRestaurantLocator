@@ -18,6 +18,7 @@ model User {
   created_at  DateTime      @default(now())
   restaurants Restaurant[]
   orders      Order[]
+  deliveries  Delivery[]
 }
 
 enum Role {
@@ -47,6 +48,18 @@ enum OrderStatus {
   delivered
   cancelled
   rejected
+}
+
+enum OrderType {
+  pickup
+  delivery
+  dine_in
+}
+
+enum DeliveryStatus {
+  pending
+  on_route
+  delivered
 }
 
 model Restaurant {
@@ -86,10 +99,12 @@ model Order {
   restaurant_id Int
   total_price   Decimal     @db.Decimal(10, 2)
   status        OrderStatus @default(pending)
+  order_type    OrderType   @default(delivery)
   order_time    DateTime    @default(now())
   customer      User        @relation(fields: [customer_id], references: [user_id])
   restaurant    Restaurant  @relation(fields: [restaurant_id], references: [id])
   order_items   OrderItem[]
+  deliveries    Delivery[]
 }
 
 model OrderItem {
@@ -100,4 +115,24 @@ model OrderItem {
   preferences  String?
   order        Order    @relation(fields: [order_id], references: [id])
   item         MenuItem @relation(fields: [item_id], references: [id])
+}
+
+model Delivery {
+  delivery_id         Int            @id @default(autoincrement())
+  order_id            Int
+  delivery_person_id  Int?
+  latitude            Decimal?       @db.Decimal(10, 7)
+  longitude           Decimal?       @db.Decimal(10, 7)
+  status              DeliveryStatus @default(pending)
+  updated_at          DateTime       @default(now())
+  order               Order          @relation(fields: [order_id], references: [id])
+  delivery_person     User?          @relation(fields: [delivery_person_id], references: [user_id])
+}
+
+model Notification {
+  notification_id Int      @id @default(autoincrement())
+  title           String
+  content         String
+  target_role     String
+  created_at      DateTime @default(now())
 }

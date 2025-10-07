@@ -11,14 +11,15 @@ interface CustomerDashboardProps {
   navigation: any;
   user: any;
   onLogout: () => void;
+  activeTab: string;
 }
 
-const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ navigation, user, onLogout }) => {
-  const [activeTab, setActiveTab] = useState('map');
+const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ navigation, user, onLogout, activeTab }) => {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mapView, setMapView] = useState(true); // Toggle between map and list view
   const [profileName, setProfileName] = useState(user?.name || '');
   const [profileEmail, setProfileEmail] = useState(user?.email || '');
   const [profilePhone, setProfilePhone] = useState(user?.phone || '');
@@ -129,46 +130,136 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ navigation, user,
   const renderTabContent = () => {
     switch (activeTab) {
       case 'map':
+        const validRestaurants = restaurants.filter((restaurant) => {
+          const lat = parseFloat(restaurant.latitude || '');
+          const lng = parseFloat(restaurant.longitude || '');
+          return !isNaN(lat) && !isNaN(lng) &&
+                 lat >= -90 && lat <= 90 &&
+                 lng >= -180 && lng <= 180;
+        });
+
         return (
-          <View style={styles.tabContent}>
-            {location ? (
-              <MapView
-                style={styles.map}
-                initialRegion={{
-                  latitude: location.coords.latitude,
-                  longitude: location.coords.longitude,
-                  latitudeDelta: 0.0922,
-                  longitudeDelta: 0.0421,
-                }}
-                showsUserLocation
-              >
-                {restaurants
-                  .filter((restaurant) => {
-                    const lat = parseFloat(restaurant.latitude || '');
-                    const lng = parseFloat(restaurant.longitude || '');
-                    return !isNaN(lat) && !isNaN(lng) &&
-                           lat >= -90 && lat <= 90 &&
-                           lng >= -180 && lng <= 180;
-                  })
-                  .map((restaurant) => (
-                    <Marker
-                      key={restaurant.id}
-                      coordinate={{
-                        latitude: parseFloat(restaurant.latitude || '0'),
-                        longitude: parseFloat(restaurant.longitude || '0'),
-                      }}
-                      title={restaurant.name}
-                      description={restaurant.location}
-                      onPress={() => handleRestaurantPress(restaurant)}
-                    />
-                  ))}
-              </MapView>
-            ) : (
-              <View style={styles.loadingContainer}>
-                <Text style={[styles.loadingText, { color: colors.text }]}>
-                  {loading ? 'Getting your location...' : 'Location not available'}
+          <View style={[styles.tabContent, mapView && styles.mapTabContent]}>
+            <View style={styles.mapHeader}>
+              <Text style={[styles.mapTitle, { color: colors.text }]}>
+                Nearby Restaurants
+              </Text>
+              <Text style={[styles.restaurantCount, { color: colors.textSecondary }]}>
+                {validRestaurants.length} restaurant{validRestaurants.length !== 1 ? 's' : ''} found
+              </Text>
+
+              {validRestaurants.length > 0 && (
+                <View style={styles.viewToggle}>
+                  <TouchableOpacity
+                    style={[styles.toggleButton, mapView && styles.toggleButtonActive]}
+                    onPress={() => setMapView(true)}
+                  >
+                    <Text style={[styles.toggleButtonText, mapView && styles.toggleButtonTextActive]}>
+                      Map View
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.toggleButton, !mapView && styles.toggleButtonActive]}
+                    onPress={() => setMapView(false)}
+                  >
+                    <Text style={[styles.toggleButtonText, !mapView && styles.toggleButtonTextActive]}>
+                      List View
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+
+            {validRestaurants.length === 0 && !loading ? (
+              <View style={styles.noRestaurantsContainer}>
+                <Text style={[styles.noRestaurantsText, { color: colors.textSecondary }]}>
+                  No restaurants with location data available
+                </Text>
+                <Text style={[styles.noRestaurantsSubtext, { color: colors.textSecondary }]}>
+                  Check back later for restaurant locations
                 </Text>
               </View>
+            ) : mapView ? (
+              // Map View
+              <View style={styles.mapContainer}>
+                {location ? (
+                  <MapView
+                    style={styles.expandedMap}
+                    initialRegion={{
+                      latitude: location.coords.latitude,
+                      longitude: location.coords.longitude,
+                      latitudeDelta: 0.0922,
+                      longitudeDelta: 0.0421,
+                    }}
+                    showsUserLocation
+                    showsMyLocationButton
+                    showsCompass
+                    zoomEnabled
+                    scrollEnabled
+                  >
+                    {validRestaurants.map((restaurant) => (
+                      <Marker
+                        key={restaurant.id}
+                        coordinate={{
+                          latitude: parseFloat(restaurant.latitude || '0'),
+                          longitude: parseFloat(restaurant.longitude || '0'),
+                        }}
+                        title={restaurant.name}
+                        description={`${restaurant.location} • Tap to view menu & order`}
+                        pinColor={colors.primary}
+                        onPress={() => handleRestaurantPress(restaurant)}
+                      />
+                    ))}
+                  </MapView>
+                ) : (
+                  <View style={[styles.loadingContainer, styles.expandedMap]}>
+                    <Text style={[styles.loadingText, { color: colors.text }]}>
+                      {loading ? 'Getting your location...' : 'Location not available'}
+                    </Text>
+                    {validRestaurants.length > 0 && (
+                      <Text style={[styles.locationNote, { color: colors.textSecondary }]}>
+                        Showing all restaurants on map
+                      </Text>
+                    )}
+                  </View>
+                )}
+
+                <View style={styles.mapOverlay}>
+                  <Text style={[styles.mapInstructions, { color: colors.textSecondary }]}>
+                    Tap on restaurant markers to view menu and place orders
+                  </Text>
+                </View>
+              </View>
+            ) : (
+              // List View
+              <ScrollView style={styles.listContainer} showsVerticalScrollIndicator={false}>
+                {validRestaurants.map((restaurant) => (
+                  <TouchableOpacity
+                    key={restaurant.id}
+                    style={[styles.restaurantCard, { backgroundColor: colors.surface }]}
+                    onPress={() => handleRestaurantPress(restaurant)}
+                  >
+                    <View style={styles.restaurantCardContent}>
+                      <Text style={[styles.restaurantCardName, { color: colors.text }]}>
+                        {restaurant.name}
+                      </Text>
+                      <Text style={[styles.restaurantCardLocation, { color: colors.textSecondary }]}>
+                        📍 {restaurant.location}
+                      </Text>
+                      {restaurant.contact_info && (
+                        <Text style={[styles.restaurantCardContact, { color: colors.textSecondary }]}>
+                          📞 {restaurant.contact_info}
+                        </Text>
+                      )}
+                    </View>
+                    <View style={[styles.restaurantCardArrow, { backgroundColor: colors.primary }]}>
+                      <Text style={[styles.restaurantCardArrowText, { color: colors.background }]}>
+                        →
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
             )}
           </View>
         );
@@ -316,45 +407,22 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ navigation, user,
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Text style={[styles.title, { color: colors.text }]}>Customer Dashboard</Text>
-      <Text style={[styles.welcome, { color: colors.text }]}>Welcome, {user?.name || 'User'}!</Text>
-
-      {/* Tab Bar */}
-      <View style={styles.tabBar}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'map' && styles.activeTab]}
-          onPress={() => setActiveTab('map')}
-        >
-          <Text style={[styles.tabText, { color: activeTab === 'map' ? colors.primary : colors.textSecondary }]}>
-            Map
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'orders' && styles.activeTab]}
-          onPress={() => setActiveTab('orders')}
-        >
-          <Text style={[styles.tabText, { color: activeTab === 'orders' ? colors.primary : colors.textSecondary }]}>
-            Orders
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'profile' && styles.activeTab]}
-          onPress={() => setActiveTab('profile')}
-        >
-          <Text style={[styles.tabText, { color: activeTab === 'profile' ? colors.primary : colors.textSecondary }]}>
-            Profile
-          </Text>
-        </TouchableOpacity>
-      </View>
-
       {/* Tab Content */}
-      <ScrollView style={styles.contentContainer}>
-        {renderTabContent()}
-      </ScrollView>
+      {activeTab === 'map' && mapView ? (
+        <View style={styles.contentContainer}>
+          {renderTabContent()}
+        </View>
+      ) : (
+        <ScrollView style={styles.contentContainer}>
+          {renderTabContent()}
+        </ScrollView>
+      )}
 
-      <TouchableOpacity style={[styles.logoutButton, { backgroundColor: colors.error }]} onPress={onLogout}>
-        <Text style={[styles.logoutText, { color: colors.background }]}>Logout</Text>
-      </TouchableOpacity>
+      {activeTab === 'profile' && (
+        <TouchableOpacity style={[styles.logoutButton, { backgroundColor: colors.error }]} onPress={onLogout}>
+          <Text style={[styles.logoutText, { color: colors.background }]}>Logout</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 };
@@ -362,37 +430,6 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ navigation, user,
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: Theme.spacing.lg,
-  },
-  title: {
-    fontSize: Theme.typography.fontSize.xl,
-    fontWeight: Theme.typography.fontWeight.bold,
-    textAlign: 'center',
-    marginBottom: Theme.spacing.lg,
-  },
-  welcome: {
-    fontSize: Theme.typography.fontSize.lg,
-    marginBottom: Theme.spacing.md,
-    textAlign: 'center',
-  },
-  tabBar: {
-    flexDirection: 'row',
-    marginBottom: Theme.spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: Theme.colors.border,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: Theme.spacing.md,
-    alignItems: 'center',
-  },
-  activeTab: {
-    borderBottomWidth: 2,
-    borderBottomColor: Theme.colors.primary,
-  },
-  tabText: {
-    fontSize: Theme.typography.fontSize.md,
-    fontWeight: Theme.typography.fontWeight.medium,
   },
   contentContainer: {
     flex: 1,
@@ -400,9 +437,21 @@ const styles = StyleSheet.create({
   tabContent: {
     padding: Theme.spacing.lg,
   },
+  mapTabContent: {
+    flex: 1,
+    padding: Theme.spacing.lg,
+  },
   map: {
     width: '100%',
     height: 400,
+  },
+  mapContainer: {
+    flex: 1,
+    position: 'relative',
+  },
+  expandedMap: {
+    flex: 1,
+    width: '100%',
   },
   tabTitle: {
     fontSize: Theme.typography.fontSize.lg,
@@ -511,6 +560,122 @@ const styles = StyleSheet.create({
     fontSize: Theme.typography.fontSize.md,
     marginBottom: Theme.spacing.md,
     lineHeight: 20,
+  },
+  mapHeader: {
+    marginBottom: Theme.spacing.md,
+  },
+  mapTitle: {
+    fontSize: Theme.typography.fontSize.xl,
+    fontWeight: Theme.typography.fontWeight.bold,
+    marginBottom: Theme.spacing.xs,
+  },
+  restaurantCount: {
+    fontSize: Theme.typography.fontSize.md,
+  },
+  locationNote: {
+    fontSize: Theme.typography.fontSize.sm,
+    marginTop: Theme.spacing.sm,
+    textAlign: 'center',
+  },
+  noRestaurantsContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: Theme.spacing.xl,
+  },
+  noRestaurantsText: {
+    fontSize: Theme.typography.fontSize.lg,
+    fontWeight: Theme.typography.fontWeight.medium,
+    textAlign: 'center',
+    marginBottom: Theme.spacing.sm,
+  },
+  noRestaurantsSubtext: {
+    fontSize: Theme.typography.fontSize.md,
+    textAlign: 'center',
+  },
+  mapOverlay: {
+    position: 'absolute',
+    bottom: Theme.spacing.lg,
+    left: Theme.spacing.lg,
+    right: Theme.spacing.lg,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    padding: Theme.spacing.md,
+    borderRadius: Theme.borderRadius.md,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  mapInstructions: {
+    fontSize: Theme.typography.fontSize.sm,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  viewToggle: {
+    flexDirection: 'row',
+    marginTop: Theme.spacing.md,
+    borderRadius: Theme.borderRadius.md,
+    backgroundColor: Theme.colors.surface,
+    padding: 2,
+  },
+  toggleButton: {
+    flex: 1,
+    paddingVertical: Theme.spacing.sm,
+    paddingHorizontal: Theme.spacing.md,
+    borderRadius: Theme.borderRadius.sm,
+    alignItems: 'center',
+  },
+  toggleButtonActive: {
+    backgroundColor: Theme.colors.primary,
+  },
+  toggleButtonText: {
+    fontSize: Theme.typography.fontSize.sm,
+    fontWeight: Theme.typography.fontWeight.medium,
+    color: Theme.colors.textSecondary,
+  },
+  toggleButtonTextActive: {
+    color: Theme.colors.background,
+  },
+  listContainer: {
+    flex: 1,
+  },
+  restaurantCard: {
+    flexDirection: 'row',
+    padding: Theme.spacing.lg,
+    marginBottom: Theme.spacing.md,
+    borderRadius: Theme.borderRadius.lg,
+    elevation: 2,
+    alignItems: 'center',
+  },
+  restaurantCardContent: {
+    flex: 1,
+  },
+  restaurantCardName: {
+    fontSize: Theme.typography.fontSize.lg,
+    fontWeight: Theme.typography.fontWeight.bold,
+    marginBottom: Theme.spacing.xs,
+  },
+  restaurantCardLocation: {
+    fontSize: Theme.typography.fontSize.md,
+    marginBottom: Theme.spacing.xs,
+  },
+  restaurantCardContact: {
+    fontSize: Theme.typography.fontSize.sm,
+  },
+  restaurantCardArrow: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  restaurantCardArrowText: {
+    fontSize: Theme.typography.fontSize.lg,
+    fontWeight: Theme.typography.fontWeight.bold,
   },
 });
 

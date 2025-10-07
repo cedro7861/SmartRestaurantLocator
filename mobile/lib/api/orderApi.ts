@@ -34,6 +34,7 @@ export interface Order {
   restaurant_id: number;
   total_price: number;
   status: string;
+  order_type: 'pickup' | 'delivery' | 'dine_in';
   order_time: string;
   customer?: {
     name: string;
@@ -64,6 +65,7 @@ export const createOrder = async (data: {
     quantity: number;
     preferences?: string;
   }>;
+  order_type: 'pickup' | 'delivery' | 'dine_in';
 }): Promise<Order> => {
   const response = await api.post('/orders', data);
   return response.data;

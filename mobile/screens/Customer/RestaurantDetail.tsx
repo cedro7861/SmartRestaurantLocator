@@ -15,6 +15,7 @@ const RestaurantDetail: React.FC<RestaurantDetailProps> = ({ navigation, route }
   const [loading, setLoading] = useState(true);
   const [cart, setCart] = useState<Array<{ item: MenuItem; quantity: number; preferences: string }>>([]);
   const [showCart, setShowCart] = useState(false);
+  const [orderType, setOrderType] = useState<'pickup' | 'delivery' | 'dine_in'>('delivery');
   const { colors, spacing, borderRadius, typography } = Theme;
 
   useEffect(() => {
@@ -57,8 +58,9 @@ const RestaurantDetail: React.FC<RestaurantDetailProps> = ({ navigation, route }
           quantity: cartItem.quantity,
           preferences: cartItem.preferences,
         })),
+        order_type: orderType,
       });
-      Alert.alert('Success', 'Order placed successfully!');
+      Alert.alert('Success', `Order placed successfully for ${orderType.replace('_', ' ')}!`);
       setCart([]);
       setShowCart(false);
       navigation.goBack();
@@ -112,6 +114,36 @@ const RestaurantDetail: React.FC<RestaurantDetailProps> = ({ navigation, route }
         ))
       ) : (
         <Text style={[styles.noMenuText, { color: colors.textSecondary }]}>No menu items available</Text>
+      )}
+
+      {/* Order Type Selection */}
+      {cart.length > 0 && (
+        <View style={[styles.orderTypeSection, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Order Type</Text>
+          <View style={styles.orderTypeOptions}>
+            <TouchableOpacity
+              style={[styles.orderTypeOption, orderType === 'delivery' && styles.orderTypeOptionSelected]}
+              onPress={() => setOrderType('delivery')}
+            >
+              <Text style={[styles.orderTypeIcon, { color: orderType === 'delivery' ? colors.background : colors.primary }]}>🚚</Text>
+              <Text style={[styles.orderTypeText, { color: orderType === 'delivery' ? colors.background : colors.text }]}>Delivery</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.orderTypeOption, orderType === 'pickup' && styles.orderTypeOptionSelected]}
+              onPress={() => setOrderType('pickup')}
+            >
+              <Text style={[styles.orderTypeIcon, { color: orderType === 'pickup' ? colors.background : colors.primary }]}>🥡</Text>
+              <Text style={[styles.orderTypeText, { color: orderType === 'pickup' ? colors.background : colors.text }]}>Pickup</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.orderTypeOption, orderType === 'dine_in' && styles.orderTypeOptionSelected]}
+              onPress={() => setOrderType('dine_in')}
+            >
+              <Text style={[styles.orderTypeIcon, { color: orderType === 'dine_in' ? colors.background : colors.primary }]}>🍽️</Text>
+              <Text style={[styles.orderTypeText, { color: orderType === 'dine_in' ? colors.background : colors.text }]}>Dine In</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       )}
 
       {cart.length > 0 && (
@@ -288,6 +320,39 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: Theme.typography.fontSize.md,
+    fontWeight: Theme.typography.fontWeight.medium,
+  },
+  orderTypeSection: {
+    padding: Theme.spacing.lg,
+    marginTop: Theme.spacing.lg,
+    borderRadius: Theme.borderRadius.lg,
+    elevation: 2,
+  },
+  orderTypeOptions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: Theme.spacing.md,
+  },
+  orderTypeOption: {
+    flex: 1,
+    alignItems: 'center',
+    padding: Theme.spacing.md,
+    borderRadius: Theme.borderRadius.md,
+    borderWidth: 2,
+    borderColor: Theme.colors.border,
+    marginHorizontal: Theme.spacing.xs,
+    backgroundColor: Theme.colors.background,
+  },
+  orderTypeOptionSelected: {
+    backgroundColor: Theme.colors.primary,
+    borderColor: Theme.colors.primary,
+  },
+  orderTypeIcon: {
+    fontSize: Theme.typography.fontSize.xl,
+    marginBottom: Theme.spacing.xs,
+  },
+  orderTypeText: {
+    fontSize: Theme.typography.fontSize.sm,
     fontWeight: Theme.typography.fontWeight.medium,
   },
 });

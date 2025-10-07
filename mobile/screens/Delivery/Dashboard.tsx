@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, FlatList } from 'react-native';
 import { Theme } from '../../lib/colors';
+import { Ionicons } from '@expo/vector-icons';
 import { getAvailableDeliveries, getDeliveryHistory, updateOrderStatus, Order } from '../../lib/api/orderApi';
 
 interface DeliveryDashboardProps {
@@ -77,9 +78,9 @@ const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({ navigation, user,
         <Text style={[styles.orderId, { color: colors.text }]}>Order #{item.id}</Text>
         <Text style={[styles.deliveryStatus, {
           color: item.status === 'delivered' ? colors.success :
-                 item.status === 'delivering' ? colors.primary : colors.warning,
+                  item.status === 'delivering' ? colors.primary : colors.warning,
           backgroundColor: item.status === 'delivered' ? colors.success + '20' :
-                         item.status === 'delivering' ? colors.primary + '20' : colors.warning + '20'
+                          item.status === 'delivering' ? colors.primary + '20' : colors.warning + '20'
         }]}>
           {item.status}
         </Text>
@@ -230,6 +231,49 @@ const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({ navigation, user,
             ))}
           </View>
         );
+      case 'settings':
+        const settingsOptions = [
+          {
+            title: 'Change Password',
+            icon: 'lock-closed-outline',
+            onPress: () => navigation.navigate('ChangePassword'),
+          },
+          {
+            title: 'Notifications',
+            icon: 'notifications-outline',
+            onPress: () => navigation.navigate('Notifications'),
+          },
+          {
+            title: 'Logout',
+            icon: 'log-out-outline',
+            onPress: onLogout,
+          },
+        ];
+
+        return (
+          <View style={styles.tabContent}>
+            <Text style={[styles.tabTitle, { color: colors.text }]}>Settings</Text>
+            <Text style={[styles.tabDescription, { color: colors.textSecondary }]}>
+              Manage your account and preferences.
+            </Text>
+
+            <View style={styles.settingsList}>
+              {settingsOptions.map((item, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[styles.settingItem, { backgroundColor: colors.surface }]}
+                  onPress={item.onPress}
+                >
+                  <View style={styles.settingLeft}>
+                    <Ionicons name={item.icon as any} size={24} color={colors.primary} />
+                    <Text style={[styles.settingTitle, { color: colors.text }]}>{item.title}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        );
       default:
         return null;
     }
@@ -264,6 +308,14 @@ const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({ navigation, user,
         >
           <Text style={[styles.tabText, { color: activeTab === 'earnings' ? colors.primary : colors.textSecondary }]}>
             Earnings
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'settings' && styles.activeTab]}
+          onPress={() => setActiveTab('settings')}
+        >
+          <Text style={[styles.tabText, { color: activeTab === 'settings' ? colors.primary : colors.textSecondary }]}>
+            Settings
           </Text>
         </TouchableOpacity>
       </View>
@@ -460,6 +512,27 @@ const styles = StyleSheet.create({
   earningsItemAmount: {
     fontSize: Theme.typography.fontSize.lg,
     fontWeight: Theme.typography.fontWeight.bold,
+  },
+  settingsList: {
+    marginTop: Theme.spacing.md,
+  },
+  settingItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: Theme.spacing.md,
+    marginBottom: Theme.spacing.sm,
+    borderRadius: Theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: Theme.colors.border,
+  },
+  settingLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  settingTitle: {
+    fontSize: Theme.typography.fontSize.md,
+    marginLeft: Theme.spacing.md,
   },
 });
 
