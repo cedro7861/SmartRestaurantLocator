@@ -5,13 +5,18 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useAuth } from "./AuthContext";
 import LoginScreen from "../screens/Auth/LoginScreen";
 import RegisterScreen from "../screens/Auth/RegisterScreen";
-import AdminDashboard from "../screens/Admin/Dashboard";
+import Dashboard from "../screens/Admin/Dashboard";
 import AdminUsersScreen from "../screens/Admin/AdminUsersTab";
 import AdminRestaurantsTab from "../screens/Admin/AdminRestaurantsTab";
 import AdminOrdersTab from "../screens/Admin/AdminOrdersTab";
 import AdminSettingsTab from "../screens/Admin/AdminSettingsTab";
 import AdminChangePassword from "../screens/Admin/AdminChangePassword";
+import AdminLogout from "../screens/Admin/AdminLogout";
 import ManageNotifications from "../screens/Admin/ManageNotifications";
+import SystemHealthScreen from "../screens/Admin/SystemHealthScreen";
+import AppConfiguration from "../screens/Admin/AppConfiguration";
+import PrivacyPolicy from "../screens/Admin/PrivacyPolicy";
+import TermsOfService from "../screens/Admin/TermsOfService";
 import RestaurantTab from "../screens/Owner/RestaurantTab";
 import OrdersTab from "../screens/Owner/OrdersTab";
 import MenuTab from "../screens/Owner/MenuTab";
@@ -30,6 +35,7 @@ import DeliveryChangePassword from "../screens/Delivery/DeliveryChangePassword";
 import { CustomerDashboard } from "../screens/Customer";
 import RestaurantDetail from "../screens/Customer/RestaurantDetail";
 import CustomerSettingsTab from "../screens/Customer/SettingsTab";
+import LogoutScreen from "../screens/Customer/LogoutScreen";
 import ProfileScreen from "../screens/Customer/ProfileScreen";
 import CustomerChangePassword from "../screens/Customer/CustomerChangePassword";
 import ContactSupport from "../screens/Customer/ContactSupport";
@@ -89,6 +95,62 @@ const AdminNavigator = () => {
       >
         {(props: any) => <ManageNotifications {...props} user={user} />}
       </AdminStack.Screen>
+      <AdminStack.Screen
+        name="AdminLogout"
+        options={{
+          title: "Logout",
+          headerStyle: { backgroundColor: Theme.colors.surface },
+          headerTintColor: "#fff",
+          headerTitleStyle: { fontWeight: "bold" },
+          headerShown: true,
+        }}
+      >
+        {(props: any) => <AdminLogout {...props} user={user} onLogout={logout} />}
+      </AdminStack.Screen>
+      <AdminStack.Screen
+        name="SystemHealthScreen"
+        component={SystemHealthScreen}
+        options={{
+          title: "System Health",
+          headerStyle: { backgroundColor: Theme.colors.surface },
+          headerTintColor: "#fff",
+          headerTitleStyle: { fontWeight: "bold" },
+          headerShown: true,
+        }}
+      />
+      <AdminStack.Screen
+        name="AppConfiguration"
+        component={AppConfiguration}
+        options={{
+          title: "App Configuration",
+          headerStyle: { backgroundColor: Theme.colors.surface },
+          headerTintColor: "#fff",
+          headerTitleStyle: { fontWeight: "bold" },
+          headerShown: true,
+        }}
+      />
+      <AdminStack.Screen
+        name="PrivacyPolicy"
+        component={PrivacyPolicy}
+        options={{
+          title: "Privacy Policy",
+          headerStyle: { backgroundColor: Theme.colors.surface },
+          headerTintColor: "#fff",
+          headerTitleStyle: { fontWeight: "bold" },
+          headerShown: true,
+        }}
+      />
+      <AdminStack.Screen
+        name="TermsOfService"
+        component={TermsOfService}
+        options={{
+          title: "Terms of Service",
+          headerStyle: { backgroundColor: Theme.colors.surface },
+          headerTintColor: "#fff",
+          headerTitleStyle: { fontWeight: "bold" },
+          headerShown: true,
+        }}
+      />
     </AdminStack.Navigator>
   );
 };
@@ -103,13 +165,41 @@ const OwnerNavigator = () => {
       <OwnerStack.Screen name="EditRestaurant" component={EditRestaurant} />
       <OwnerStack.Screen name="AddMenuItem" component={AddMenuItem} />
       <OwnerStack.Screen name="ManageOrders" component={ManageOrders} />
-      <OwnerStack.Screen name="Profile">
+      <OwnerStack.Screen
+        name="Profile"
+        options={{
+          title: "Profile",
+          headerStyle: { backgroundColor: Theme.colors.surface },
+          headerTintColor: "#fff",
+          headerTitleStyle: { fontWeight: "bold" },
+          headerShown: true,
+        }}
+      >
         {(props: any) => (
           <ProfileScreen {...props} user={user} onLogout={logout} />
         )}
       </OwnerStack.Screen>
-      <OwnerStack.Screen name="ChangePassword" component={ChangePassword} />
-      <OwnerStack.Screen name="Notifications">
+      <OwnerStack.Screen
+        name="ChangePassword"
+        component={ChangePassword}
+        options={{
+          title: "Change Password",
+          headerStyle: { backgroundColor: Theme.colors.surface },
+          headerTintColor: "#fff",
+          headerTitleStyle: { fontWeight: "bold" },
+          headerShown: true,
+        }}
+      />
+      <OwnerStack.Screen
+        name="Notifications"
+        options={{
+          title: "Notifications",
+          headerStyle: { backgroundColor: Theme.colors.surface },
+          headerTintColor: "#fff",
+          headerTitleStyle: { fontWeight: "bold" },
+          headerShown: true,
+        }}
+      >
         {(props: any) => <NotificationScreen {...props} user={user} />}
       </OwnerStack.Screen>
     </OwnerStack.Navigator>
@@ -167,8 +257,24 @@ const DeliveryNavigator = () => {
       <DeliveryStack.Screen
         name="ChangePassword"
         component={DeliveryChangePassword}
+        options={{
+          title: "Change Password",
+          headerStyle: { backgroundColor: Theme.colors.surface },
+          headerTintColor: "#fff",
+          headerTitleStyle: { fontWeight: "bold" },
+          headerShown: true,
+        }}
       />
-      <DeliveryStack.Screen name="Notifications">
+      <DeliveryStack.Screen
+        name="Notifications"
+        options={{
+          title: "Notifications",
+          headerStyle: { backgroundColor: Theme.colors.surface },
+          headerTintColor: "#fff",
+          headerTitleStyle: { fontWeight: "bold" },
+          headerShown: true,
+        }}
+      >
         {(props: any) => <NotificationScreen {...props} user={user} />}
       </DeliveryStack.Screen>
     </DeliveryStack.Navigator>
@@ -291,7 +397,9 @@ const AdminTabNavigator = () => {
         tabBarInactiveTintColor: "gray",
       })}
     >
-      <AdminTab.Screen name="Home" component={AdminDashboard} />
+      <AdminTab.Screen name="Home">
+        {(props: any) => <Dashboard {...props} user={user} onLogout={logout} />}
+      </AdminTab.Screen>
       <AdminTab.Screen name="Restaurants" component={AdminRestaurantsTab} />
       <AdminTab.Screen name="Orders" component={AdminOrdersTab} />
       <AdminTab.Screen name="Settings">
@@ -312,16 +420,63 @@ const CustomerNavigator = () => {
         name="RestaurantDetail"
         component={RestaurantDetail}
       />
-      <CustomerStack.Screen name="Profile">
+      <CustomerStack.Screen
+        name="Profile"
+        options={{
+          title: "Profile",
+          headerStyle: { backgroundColor: Theme.colors.surface },
+          headerTintColor: "#fff",
+          headerTitleStyle: { fontWeight: "bold" },
+          headerShown: true,
+        }}
+      >
         {(props: any) => <ProfileScreen {...props} user={user} />}
       </CustomerStack.Screen>
       <CustomerStack.Screen
         name="ChangePassword"
+        options={{
+          title: "Change Password",
+          headerStyle: { backgroundColor: Theme.colors.surface },
+          headerTintColor: "#fff",
+          headerTitleStyle: { fontWeight: "bold" },
+          headerShown: true,
+        }}
         component={CustomerChangePassword}
       />
-      <CustomerStack.Screen name="ContactSupport" component={ContactSupport} />
-      <CustomerStack.Screen name="Notifications">
+      <CustomerStack.Screen
+        name="ContactSupport"
+        options={{
+          title: "Contact Support",
+          headerStyle: { backgroundColor: Theme.colors.surface },
+          headerTintColor: "#fff",
+          headerTitleStyle: { fontWeight: "bold" },
+          headerShown: true,
+        }}
+        component={ContactSupport}
+      />
+      <CustomerStack.Screen
+        name="Notifications"
+        options={{
+          title: "Notifications",
+          headerStyle: { backgroundColor: Theme.colors.surface },
+          headerTintColor: "#fff",
+          headerTitleStyle: { fontWeight: "bold" },
+          headerShown: true,
+        }}
+      >
         {(props: any) => <NotificationScreen {...props} user={user} />}
+      </CustomerStack.Screen>
+      <CustomerStack.Screen
+        name="LogoutScreen"
+        options={{
+          title: "Logout",
+          headerStyle: { backgroundColor: Theme.colors.surface },
+          headerTintColor: "#fff",
+          headerTitleStyle: { fontWeight: "bold" },
+          headerShown: true,
+        }}
+      >
+        {(props: any) => <LogoutScreen {...props} user={user} onLogout={logout} />}
       </CustomerStack.Screen>
     </CustomerStack.Navigator>
   );
@@ -330,7 +485,11 @@ const CustomerNavigator = () => {
 const Navigation: React.FC = () => {
   const { user, login, logout, isLoading } = useAuth();
 
-  if (isLoading || !user) {
+  if (isLoading) {
+    return null; // or a loading component
+  }
+
+  if (!user) {
     return (
       <NavigationContainer>
         <AuthStack.Navigator screenOptions={{ headerShown: false }}>
@@ -344,7 +503,7 @@ const Navigation: React.FC = () => {
   }
 
   const renderDashboard = () => {
-    switch (user?.role) {
+    switch (user.role) {
       case "admin":
         return <AdminNavigator key="admin" />;
       case "owner":
@@ -359,9 +518,7 @@ const Navigation: React.FC = () => {
 
   return (
     <NavigationContainer>
-      <AuthStack.Navigator screenOptions={{ headerShown: false }}>
-        <AuthStack.Screen name="Dashboard" component={renderDashboard} />
-      </AuthStack.Navigator>
+      {renderDashboard()}
     </NavigationContainer>
   );
 };

@@ -207,7 +207,7 @@ const AdminSettingsTab: React.FC<AdminSettingsTabProps> = ({
               marginBottom: spacing.xxl,
             },
           ]}
-          onPress={onLogout}
+          onPress={() => navigation.navigate("AdminLogout")}
           activeOpacity={0.7}
         >
           <Ionicons name="log-out-outline" size={20} color={colors.text} />

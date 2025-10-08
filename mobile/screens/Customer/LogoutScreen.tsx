@@ -1,99 +1,263 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import { Theme } from '../../lib/colors';
+import React from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  SafeAreaView,
+  Alert,
+} from "react-native";
+import { Theme } from "../../lib/colors";
+import { Ionicons } from "@expo/vector-icons";
 
 interface LogoutScreenProps {
   navigation: any;
+  user: {
+    name: string;
+    email: string;
+    role: string;
+  };
   onLogout: () => void;
 }
 
-const LogoutScreen: React.FC<LogoutScreenProps> = ({ navigation, onLogout }) => {
+const LogoutScreen: React.FC<LogoutScreenProps> = ({ navigation, user, onLogout }) => {
   const { colors, spacing, borderRadius, typography } = Theme;
 
   const handleLogout = () => {
     Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
+      "Logout",
+      "Are you sure you want to logout?",
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Logout', style: 'destructive', onPress: onLogout },
+        { text: "Cancel", style: "cancel" },
+        { text: "Logout", style: "destructive", onPress: onLogout },
       ]
     );
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Text style={[styles.title, { color: colors.text }]}>Logout</Text>
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: colors.background }]}
+    >
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingHorizontal: spacing.lg },
+        ]}
+      >
+        {/* BACK BUTTON */}
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <Text style={[styles.backText, { color: colors.text }]}>Back</Text>
+        </TouchableOpacity>
 
-      <View style={styles.content}>
-        <Text style={[styles.message, { color: colors.textSecondary }]}>
-          You are about to logout from your account. Make sure to save any unsaved changes before proceeding.
+        <Text style={[styles.title, { color: colors.text }]}>
+          Logout Confirmation
         </Text>
 
-        <TouchableOpacity
-          style={[styles.logoutButton, { backgroundColor: colors.error }]}
-          onPress={handleLogout}
+        {/* PROFILE HEADER */}
+        <View
+          style={[
+            styles.profileHeader,
+            { backgroundColor: colors.surface, borderRadius: borderRadius.lg },
+          ]}
         >
-          <Text style={[styles.logoutButtonText, { color: colors.background }]}>Logout</Text>
-        </TouchableOpacity>
+          <View style={styles.avatar}>
+            <Text style={[styles.avatarText, { color: colors.text }]}>
+              {user.name[0]}
+            </Text>
+          </View>
+          <View style={styles.userInfo}>
+            <Text style={[styles.userName, { color: colors.text }]}>
+              {user.name}
+            </Text>
+            <Text
+              style={[styles.userEmail, { color: colors.textSecondary }]}
+              numberOfLines={1}
+            >
+              {user.email}
+            </Text>
+            <View
+              style={[
+                styles.roleBadge,
+                {
+                  backgroundColor: colors.customer,
+                  borderRadius: borderRadius.sm,
+                },
+              ]}
+            >
+              <Text style={[styles.roleText, { color: colors.text }]}>
+                {user.role}
+              </Text>
+            </View>
+          </View>
+        </View>
 
-        <TouchableOpacity
-          style={[styles.cancelButton, { backgroundColor: colors.surface }]}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={[styles.cancelButtonText, { color: colors.text }]}>Cancel</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+        <View style={styles.content}>
+          <Text style={[styles.message, { color: colors.textSecondary }]}>
+            You are about to logout from your account. Make sure to save any unsaved changes before proceeding.
+          </Text>
+
+          <TouchableOpacity
+            style={[
+              styles.logoutButton,
+              { backgroundColor: colors.error, borderRadius: borderRadius.lg },
+            ]}
+            onPress={handleLogout}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="log-out-outline" size={20} color={colors.background} />
+            <Text style={[styles.logoutButtonText, { color: colors.background }]}>
+              Confirm Logout
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.cancelButton,
+              {
+                backgroundColor: colors.surface,
+                borderRadius: borderRadius.lg,
+                borderColor: colors.border,
+              },
+            ]}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="close" size={20} color={colors.text} />
+            <Text style={[styles.cancelButtonText, { color: colors.text }]}>
+              Cancel
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Version Footer */}
+        <Text style={[styles.versionText, { color: colors.textMuted }]}>
+          App Version 1.0.0 (Build 42)
+        </Text>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
+// --- Stylesheet (Updated to use Theme values consistently) ---
+
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    padding: Theme.spacing.lg,
+  },
+  scrollContent: {
+    paddingTop: Theme.spacing.lg,
+    paddingBottom: Theme.spacing.xl,
+  },
+  backButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: Theme.spacing.lg,
+    padding: Theme.spacing.sm,
+    alignSelf: "flex-start",
+  },
+  backText: {
+    fontSize: Theme.typography.fontSize.md,
+    marginLeft: Theme.spacing.sm,
   },
   title: {
-    fontSize: Theme.typography.fontSize.xl,
+    fontSize: Theme.typography.fontSize.xxl,
     fontWeight: Theme.typography.fontWeight.bold,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: Theme.spacing.xl,
   },
-  content: {
+  // --- Profile Header Styles ---
+  profileHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: Theme.spacing.md,
+    marginBottom: Theme.spacing.xl,
+    borderWidth: 1,
+    borderColor: Theme.colors.borderLight,
+  },
+  avatar: {
+    width: 60,
+    height: 60,
+    borderRadius: Theme.borderRadius.round,
+    backgroundColor: Theme.colors.primaryDark,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: Theme.spacing.md,
+  },
+  avatarText: {
+    fontSize: Theme.typography.fontSize.xxl,
+    fontWeight: Theme.typography.fontWeight.bold,
+  },
+  userInfo: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+  },
+  userName: {
+    fontSize: Theme.typography.fontSize.lg,
+    fontWeight: Theme.typography.fontWeight.semibold,
+  },
+  userEmail: {
+    fontSize: Theme.typography.fontSize.sm,
+    marginBottom: Theme.spacing.xs,
+  },
+  roleBadge: {
+    alignSelf: "flex-start",
+    paddingHorizontal: Theme.spacing.sm,
+    paddingVertical: Theme.spacing.xs / 2,
+  },
+  roleText: {
+    fontSize: Theme.typography.fontSize.xs,
+    fontWeight: Theme.typography.fontWeight.medium,
+    textTransform: "uppercase",
+  },
+  content: {
+    alignItems: "center",
   },
   message: {
     fontSize: Theme.typography.fontSize.md,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: Theme.spacing.xl,
-    lineHeight: 22,
+    lineHeight: 24,
     paddingHorizontal: Theme.spacing.lg,
   },
   logoutButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     padding: Theme.spacing.lg,
-    borderRadius: Theme.borderRadius.lg,
-    alignItems: 'center',
     marginBottom: Theme.spacing.md,
-    width: '80%',
+    width: "80%",
     elevation: 3,
   },
   logoutButtonText: {
     fontSize: Theme.typography.fontSize.lg,
     fontWeight: Theme.typography.fontWeight.medium,
+    marginLeft: Theme.spacing.sm,
   },
   cancelButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     padding: Theme.spacing.lg,
-    borderRadius: Theme.borderRadius.lg,
-    alignItems: 'center',
     borderWidth: 1,
-    borderColor: Theme.colors.border,
-    width: '80%',
+    width: "80%",
   },
   cancelButtonText: {
     fontSize: Theme.typography.fontSize.lg,
     fontWeight: Theme.typography.fontWeight.medium,
+    marginLeft: Theme.spacing.sm,
+  },
+  // --- Footer Style ---
+  versionText: {
+    fontSize: Theme.typography.fontSize.xs,
+    textAlign: "center",
+    paddingBottom: Theme.spacing.xl,
+    marginTop: Theme.spacing.xl,
   },
 });
 

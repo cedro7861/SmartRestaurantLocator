@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Theme } from '../../lib/colors';
 import { getUsers, User, updateUser, deleteUser } from '../../lib/api/userApi';
@@ -11,6 +11,9 @@ interface AdminUsersTabProps {
 const AdminUsersTab: React.FC<AdminUsersTabProps> = ({ navigation }) => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [showActionModal, setShowActionModal] = useState(false);
   const { colors, spacing, borderRadius, typography } = Theme;
 
   useEffect(() => {
@@ -32,17 +35,19 @@ const AdminUsersTab: React.FC<AdminUsersTabProps> = ({ navigation }) => {
     try {
       await updateUser(user.user_id, { role: newRole });
       Alert.alert('Success', `${user.name}'s role updated to ${newRole}`);
-      loadUsers(); // Refresh the list
+      loadUsers();
+      setShowRoleModal(false);
     } catch (error) {
       Alert.alert('Error', 'Failed to update user role');
     }
   };
 
-  const handleStatusChange = async (user: User, newStatus: string) => {
+  const handleStatusToggle = async (user: User) => {
+    const newStatus = user.status === 'active' ? 'inactive' : 'active';
     try {
       await updateUser(user.user_id, { status: newStatus });
       Alert.alert('Success', `${user.name} is now ${newStatus}`);
-      loadUsers(); // Refresh the list
+      loadUsers();
     } catch (error) {
       Alert.alert('Error', 'Failed to update user status');
     }
@@ -61,7 +66,8 @@ const AdminUsersTab: React.FC<AdminUsersTabProps> = ({ navigation }) => {
             try {
               await deleteUser(user.user_id);
               Alert.alert('Success', `${user.name} has been deleted`);
-              loadUsers(); // Refresh the list
+              loadUsers();
+              setShowActionModal(false);
             } catch (error) {
               Alert.alert('Error', 'Failed to delete user');
             }
@@ -85,88 +91,163 @@ const AdminUsersTab: React.FC<AdminUsersTabProps> = ({ navigation }) => {
     return status === 'active' ? colors.success : colors.error;
   };
 
+  const RoleSelectorModal = () => (
+    <Modal
+      visible={showRoleModal}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setShowRoleModal(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.modalTitle, { color: colors.text }]}>
+            Change Role for {selectedUser?.name}
+          </Text>
+          <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
+            Current role: {selectedUser?.role}
+          </Text>
+          
+          <View style={styles.roleOptions}>
+            {['customer', 'delivery', 'owner', 'admin'].map((role) => (
+              <TouchableOpacity
+                key={role}
+                style={[
+                  styles.roleOption,
+                  { 
+                    backgroundColor: selectedUser?.role === role ? colors.primary + '20' : colors.background,
+                    borderColor: getRoleColor(role)
+                  }
+                ]}
+                onPress={() => selectedUser && handleRoleChange(selectedUser, role)}
+                disabled={selectedUser?.role === role}
+              >
+                <View style={[styles.roleDot, { backgroundColor: getRoleColor(role) }]} />
+                <Text style={[styles.roleOptionText, { color: colors.text }]}>
+                  {role.charAt(0).toUpperCase() + role.slice(1)}
+                </Text>
+                {selectedUser?.role === role && (
+                  <Ionicons name="checkmark" size={20} color={colors.primary} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+          
+          <TouchableOpacity
+            style={[styles.modalButton, { backgroundColor: colors.border }]}
+            onPress={() => setShowRoleModal(false)}
+          >
+            <Text style={[styles.modalButtonText, { color: colors.text }]}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  const ActionModal = () => (
+    <Modal
+      visible={showActionModal}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setShowActionModal(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.modalTitle, { color: colors.text }]}>
+            Manage {selectedUser?.name}
+          </Text>
+          
+          <TouchableOpacity
+            style={[styles.actionOption, { borderBottomColor: colors.border }]}
+            onPress={() => {
+              setShowActionModal(false);
+              setShowRoleModal(true);
+            }}
+          >
+            <Ionicons name="person" size={20} color={colors.primary} />
+            <Text style={[styles.actionOptionText, { color: colors.text }]}>
+              Change Role
+            </Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.actionOption, { borderBottomColor: colors.border }]}
+            onPress={() => selectedUser && handleStatusToggle(selectedUser)}
+          >
+            <Ionicons 
+              name={selectedUser?.status === 'active' ? 'eye-off' : 'eye'} 
+              size={20} 
+              color={selectedUser?.status === 'active' ? colors.warning : colors.success} 
+            />
+            <Text style={[styles.actionOptionText, { color: colors.text }]}>
+              {selectedUser?.status === 'active' ? 'Deactivate' : 'Activate'} User
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.actionOption, { borderBottomWidth: 0 }]}
+            onPress={() => selectedUser && handleDeleteUser(selectedUser)}
+          >
+            <Ionicons name="trash" size={20} color={colors.error} />
+            <Text style={[styles.actionOptionText, { color: colors.error }]}>
+              Delete User
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.modalButton, { backgroundColor: colors.border }]}
+            onPress={() => setShowActionModal(false)}
+          >
+            <Text style={[styles.modalButtonText, { color: colors.text }]}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+
   const renderUser = ({ item }: { item: User }) => (
-    <View style={[styles.userCard, { backgroundColor: colors.surface }]}>
-      <View style={styles.userHeader}>
-        <View style={styles.userInfo}>
-          <Text style={[styles.userName, { color: colors.text }]}>{item.name}</Text>
+    <TouchableOpacity
+      style={[styles.userCard, { backgroundColor: colors.surface }]}
+      onPress={() => {
+        setSelectedUser(item);
+        setShowActionModal(true);
+      }}
+      activeOpacity={0.7}
+    >
+      <View style={styles.userMain}>
+        <View style={styles.userAvatar}>
+          <Text style={[styles.avatarText, { color: colors.background }]}>
+            {item.name.charAt(0).toUpperCase()}
+          </Text>
+        </View>
+        
+        <View style={styles.userDetails}>
+          <View style={styles.userHeader}>
+            <Text style={[styles.userName, { color: colors.text }]}>{item.name}</Text>
+            <View style={styles.badgeContainer}>
+              <View style={[styles.roleBadge, { backgroundColor: getRoleColor(item.role) + '20' }]}>
+                <Text style={[styles.roleBadgeText, { color: getRoleColor(item.role) }]}>
+                  {item.role}
+                </Text>
+              </View>
+              <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
+                <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.status) }]} />
+                <Text style={[styles.statusBadgeText, { color: getStatusColor(item.status) }]}>
+                  {item.status}
+                </Text>
+              </View>
+            </View>
+          </View>
+          
           <Text style={[styles.userEmail, { color: colors.textSecondary }]}>{item.email}</Text>
           {item.phone && (
             <Text style={[styles.userPhone, { color: colors.textSecondary }]}>{item.phone}</Text>
           )}
         </View>
-        <View style={styles.statusContainer}>
-          <Text style={[styles.userRole, { color: getRoleColor(item.role) }]}>
-            {item.role}
-          </Text>
-          <Text style={[styles.userStatus, { color: getStatusColor(item.status) }]}>
-            {item.status}
-          </Text>
-        </View>
+        
+        <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
       </View>
-
-      <View style={styles.actionButtons}>
-        {/* Role Change Buttons */}
-        <View style={styles.roleButtons}>
-          {item.role !== 'admin' && (
-            <TouchableOpacity
-              style={[styles.roleButton, { backgroundColor: colors.error }]}
-              onPress={() => handleRoleChange(item, 'admin')}
-            >
-              <Text style={[styles.roleButtonText, { color: colors.background }]}>Make Admin</Text>
-            </TouchableOpacity>
-          )}
-          {item.role !== 'owner' && (
-            <TouchableOpacity
-              style={[styles.roleButton, { backgroundColor: colors.warning }]}
-              onPress={() => handleRoleChange(item, 'owner')}
-            >
-              <Text style={[styles.roleButtonText, { color: colors.background }]}>Make Owner</Text>
-            </TouchableOpacity>
-          )}
-          {item.role !== 'delivery' && (
-            <TouchableOpacity
-              style={[styles.roleButton, { backgroundColor: colors.primary }]}
-              onPress={() => handleRoleChange(item, 'delivery')}
-            >
-              <Text style={[styles.roleButtonText, { color: colors.background }]}>Make Delivery</Text>
-            </TouchableOpacity>
-          )}
-          {item.role !== 'customer' && (
-            <TouchableOpacity
-              style={[styles.roleButton, { backgroundColor: colors.success }]}
-              onPress={() => handleRoleChange(item, 'customer')}
-            >
-              <Text style={[styles.roleButtonText, { color: colors.background }]}>Make Customer</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Status Toggle */}
-        <TouchableOpacity
-          style={[styles.statusButton, item.status === 'active' ? styles.deactivateButton : styles.activateButton]}
-          onPress={() => handleStatusChange(item, item.status === 'active' ? 'inactive' : 'active')}
-        >
-          <Ionicons
-            name={item.status === 'active' ? 'eye-off' : 'eye'}
-            size={16}
-            color={colors.background}
-          />
-          <Text style={[styles.statusButtonText, { color: colors.background }]}>
-            {item.status === 'active' ? 'Deactivate' : 'Activate'}
-          </Text>
-        </TouchableOpacity>
-
-        {/* Delete Button */}
-        <TouchableOpacity
-          style={[styles.deleteButton, { backgroundColor: colors.error }]}
-          onPress={() => handleDeleteUser(item)}
-        >
-          <Ionicons name="trash" size={16} color={colors.background} />
-          <Text style={[styles.deleteButtonText, { color: colors.background }]}>Delete</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+    </TouchableOpacity>
   );
 
   if (loading) {
@@ -179,21 +260,21 @@ const AdminUsersTab: React.FC<AdminUsersTabProps> = ({ navigation }) => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Text style={[styles.title, { color: colors.text }]}>Users Management</Text>
+      <Text style={[styles.title, { color: colors.text }]}>User Management</Text>
 
       {/* User Statistics */}
       <View style={styles.userStats}>
-        <View style={styles.statCard}>
+        <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
           <Text style={[styles.statNumber, { color: colors.primary }]}>{users.length}</Text>
-          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total Users</Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total</Text>
         </View>
-        <View style={styles.statCard}>
+        <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
           <Text style={[styles.statNumber, { color: colors.success }]}>
             {users.filter(u => u.status === 'active').length}
           </Text>
           <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Active</Text>
         </View>
-        <View style={styles.statCard}>
+        <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
           <Text style={[styles.statNumber, { color: colors.error }]}>
             {users.filter(u => u.status === 'inactive').length}
           </Text>
@@ -206,7 +287,11 @@ const AdminUsersTab: React.FC<AdminUsersTabProps> = ({ navigation }) => {
         renderItem={renderUser}
         keyExtractor={(item) => item.user_id?.toString() || Math.random().toString()}
         contentContainerStyle={styles.listContainer}
+        showsVerticalScrollIndicator={false}
       />
+
+      <RoleSelectorModal />
+      <ActionModal />
     </View>
   );
 };
@@ -224,124 +309,176 @@ const styles = StyleSheet.create({
   },
   userStats: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     marginBottom: Theme.spacing.lg,
   },
   statCard: {
+    flex: 1,
     alignItems: 'center',
     padding: Theme.spacing.md,
-    backgroundColor: Theme.colors.surface,
-    borderRadius: Theme.borderRadius.md,
+    borderRadius: Theme.borderRadius.lg,
+    marginHorizontal: Theme.spacing.xs,
     borderWidth: 1,
     borderColor: Theme.colors.border,
-    minWidth: 80,
   },
   statNumber: {
     fontSize: Theme.typography.fontSize.xl,
     fontWeight: Theme.typography.fontWeight.bold,
   },
   statLabel: {
-    fontSize: Theme.typography.fontSize.sm,
+    fontSize: Theme.typography.fontSize.xs,
     marginTop: Theme.spacing.xs,
   },
   listContainer: {
     paddingBottom: Theme.spacing.xl,
   },
   userCard: {
-    padding: Theme.spacing.lg,
+    padding: Theme.spacing.md,
     marginBottom: Theme.spacing.sm,
-    borderRadius: Theme.borderRadius.md,
+    borderRadius: Theme.borderRadius.lg,
     borderWidth: 1,
     borderColor: Theme.colors.border,
+  },
+  userMain: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  userAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: Theme.colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Theme.spacing.md,
+  },
+  avatarText: {
+    fontSize: Theme.typography.fontSize.lg,
+    fontWeight: Theme.typography.fontWeight.bold,
+  },
+  userDetails: {
+    flex: 1,
   },
   userHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: Theme.spacing.md,
-  },
-  userInfo: {
-    flex: 1,
-  },
-  userName: {
-    fontSize: Theme.typography.fontSize.lg,
-    fontWeight: Theme.typography.fontWeight.bold,
-  },
-  userEmail: {
-    fontSize: Theme.typography.fontSize.sm,
-    marginTop: Theme.spacing.xs,
-  },
-  userPhone: {
-    fontSize: Theme.typography.fontSize.sm,
-    marginTop: Theme.spacing.xs,
-  },
-  statusContainer: {
-    alignItems: 'flex-end',
-  },
-  userRole: {
-    fontSize: Theme.typography.fontSize.sm,
-    fontWeight: Theme.typography.fontWeight.bold,
-    textTransform: 'capitalize',
     marginBottom: Theme.spacing.xs,
   },
-  userStatus: {
-    fontSize: Theme.typography.fontSize.sm,
-    fontWeight: Theme.typography.fontWeight.medium,
-    textTransform: 'capitalize',
+  userName: {
+    fontSize: Theme.typography.fontSize.md,
+    fontWeight: Theme.typography.fontWeight.bold,
+    flex: 1,
   },
-  actionButtons: {
-    borderTopWidth: 1,
-    borderTopColor: Theme.colors.border,
-    paddingTop: Theme.spacing.md,
-  },
-  roleButtons: {
+  badgeContainer: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: Theme.spacing.sm,
+    marginLeft: Theme.spacing.sm,
   },
-  roleButton: {
+  roleBadge: {
     paddingHorizontal: Theme.spacing.sm,
     paddingVertical: Theme.spacing.xs,
     borderRadius: Theme.borderRadius.sm,
     marginRight: Theme.spacing.xs,
-    marginBottom: Theme.spacing.xs,
   },
-  roleButtonText: {
+  roleBadgeText: {
     fontSize: Theme.typography.fontSize.xs,
     fontWeight: Theme.typography.fontWeight.medium,
+    textTransform: 'capitalize',
   },
-  statusButton: {
+  statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: Theme.spacing.sm,
+    paddingHorizontal: Theme.spacing.sm,
+    paddingVertical: Theme.spacing.xs,
     borderRadius: Theme.borderRadius.sm,
-    marginRight: Theme.spacing.sm,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: Theme.spacing.xs,
+  },
+  statusBadgeText: {
+    fontSize: Theme.typography.fontSize.xs,
+    fontWeight: Theme.typography.fontWeight.medium,
+    textTransform: 'capitalize',
+  },
+  userEmail: {
+    fontSize: Theme.typography.fontSize.sm,
+    marginBottom: Theme.spacing.xs,
+  },
+  userPhone: {
+    fontSize: Theme.typography.fontSize.sm,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Theme.spacing.lg,
+  },
+  modalContent: {
+    width: '100%',
+    borderRadius: Theme.borderRadius.lg,
+    padding: Theme.spacing.lg,
+    borderWidth: 1,
+    borderColor: Theme.colors.border,
+  },
+  modalTitle: {
+    fontSize: Theme.typography.fontSize.lg,
+    fontWeight: Theme.typography.fontWeight.bold,
+    marginBottom: Theme.spacing.xs,
+    textAlign: 'center',
+  },
+  modalSubtitle: {
+    fontSize: Theme.typography.fontSize.sm,
+    marginBottom: Theme.spacing.lg,
+    textAlign: 'center',
+  },
+  roleOptions: {
+    marginBottom: Theme.spacing.lg,
+  },
+  roleOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Theme.spacing.md,
+    borderRadius: Theme.borderRadius.md,
     marginBottom: Theme.spacing.sm,
+    borderWidth: 1,
   },
-  activateButton: {
-    backgroundColor: Theme.colors.success,
+  roleDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: Theme.spacing.md,
   },
-  deactivateButton: {
-    backgroundColor: Theme.colors.error,
-  },
-  statusButtonText: {
-    fontSize: Theme.typography.fontSize.sm,
+  roleOptionText: {
+    flex: 1,
+    fontSize: Theme.typography.fontSize.md,
     fontWeight: Theme.typography.fontWeight.medium,
-    marginLeft: Theme.spacing.xs,
+    textTransform: 'capitalize',
   },
-  deleteButton: {
+  actionOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: Theme.spacing.sm,
-    borderRadius: Theme.borderRadius.sm,
-    position: 'absolute',
-    right: 0,
-    bottom: 0,
+    paddingVertical: Theme.spacing.lg,
+    borderBottomWidth: 1,
   },
-  deleteButtonText: {
-    fontSize: Theme.typography.fontSize.sm,
+  actionOptionText: {
+    flex: 1,
+    fontSize: Theme.typography.fontSize.md,
     fontWeight: Theme.typography.fontWeight.medium,
-    marginLeft: Theme.spacing.xs,
+    marginLeft: Theme.spacing.md,
+  },
+  modalButton: {
+    padding: Theme.spacing.md,
+    borderRadius: Theme.borderRadius.md,
+    alignItems: 'center',
+    marginTop: Theme.spacing.md,
+  },
+  modalButtonText: {
+    fontSize: Theme.typography.fontSize.md,
+    fontWeight: Theme.typography.fontWeight.medium,
   },
   loadingText: {
     fontSize: Theme.typography.fontSize.md,

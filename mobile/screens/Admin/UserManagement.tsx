@@ -11,6 +11,7 @@ import {
   FlatList,
 } from 'react-native';
 import { Theme } from '../../lib/colors';
+import { Ionicons } from '@expo/vector-icons';
 import { getUsers, createUser, updateUser, deleteUser, User, CreateUserData } from '../../lib/api/userApi';
 
 interface UserManagementProps {
@@ -23,6 +24,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ navigation }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
   const [formData, setFormData] = useState<CreateUserData & { status?: string }>({
     name: '',
     email: '',
@@ -146,52 +149,158 @@ const UserManagement: React.FC<UserManagementProps> = ({ navigation }) => {
     );
   };
 
-  const renderUserItem = ({ item }: { item: User }) => (
-    <View style={[styles.userCard, { backgroundColor: colors.surface }]}>
-      <View style={styles.userInfo}>
-        <Text style={[styles.userName, { color: colors.text }]}>{item.name}</Text>
-        <Text style={[styles.userEmail, { color: colors.textSecondary }]}>{item.email}</Text>
-        <Text style={[styles.userRole, {
-          color: item.role === 'admin' ? colors.error :
-                 item.role === 'owner' ? colors.primary : colors.success
-        }]}>
-          {item.role}
-        </Text>
-        <Text style={[styles.userStatus, {
-          color: item.status === 'active' ? colors.success : colors.warning
-        }]}>
-          {item.status}
-        </Text>
-      </View>
+  const enterSelectionMode = () => {
+    setIsSelectionMode(true);
+  };
 
-      <View style={styles.userActions}>
-        <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: colors.primary }]}
-          onPress={() => handleEditUser(item)}
-        >
-          <Text style={[styles.actionButtonText, { color: colors.background }]}>Edit</Text>
-        </TouchableOpacity>
+  const exitSelectionMode = () => {
+    setIsSelectionMode(false);
+    setSelectedUsers(new Set());
+  };
 
-        <TouchableOpacity
-          style={[styles.actionButton, {
-            backgroundColor: item.status === 'active' ? colors.warning : colors.success
-          }]}
-          onPress={() => handleToggleStatus(item)}
-        >
-          <Text style={[styles.actionButtonText, { color: colors.background }]}>
-            {item.status === 'active' ? 'Deactivate' : 'Activate'}
-          </Text>
-        </TouchableOpacity>
+  const toggleUserSelection = (userId: string) => {
+    const newSelected = new Set(selectedUsers);
+    if (newSelected.has(userId)) {
+      newSelected.delete(userId);
+    } else {
+      newSelected.add(userId);
+    }
+    setSelectedUsers(newSelected);
+  };
 
-        <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: colors.error }]}
-          onPress={() => handleDeleteUser(item)}
-        >
-          <Text style={[styles.actionButtonText, { color: colors.background }]}>Delete</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+  const handleBulkActivate = async () => {
+    const selectedArray = Array.from(selectedUsers);
+    for (const userId of selectedArray) {
+      try {
+        await updateUser(parseInt(userId), { status: 'active' });
+      } catch (error) {
+        Alert.alert('Error', `Failed to activate user ${userId}`);
+      }
+    }
+    Alert.alert('Success', 'Selected users activated');
+    loadUsers();
+    exitSelectionMode();
+  };
+
+  const handleBulkDeactivate = async () => {
+    const selectedArray = Array.from(selectedUsers);
+    for (const userId of selectedArray) {
+      try {
+        await updateUser(parseInt(userId), { status: 'inactive' });
+      } catch (error) {
+        Alert.alert('Error', `Failed to deactivate user ${userId}`);
+      }
+    }
+    Alert.alert('Success', 'Selected users deactivated');
+    loadUsers();
+    exitSelectionMode();
+  };
+
+  const handleBulkDelete = () => {
+    Alert.alert(
+      'Confirm Delete',
+      `Are you sure you want to delete ${selectedUsers.size} selected users?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            const selectedArray = Array.from(selectedUsers);
+            for (const userId of selectedArray) {
+              try {
+                await deleteUser(parseInt(userId));
+              } catch (error) {
+                Alert.alert('Error', `Failed to delete user ${userId}`);
+              }
+            }
+            Alert.alert('Success', 'Selected users deleted');
+            loadUsers();
+            exitSelectionMode();
+          },
+        },
+      ]
+    );
+  };
+
+  const renderUserItem = ({ item }: { item: User }) => {
+    const isSelected = selectedUsers.has(item.user_id.toString());
+    return (
+      <TouchableOpacity
+        onLongPress={() => {
+          if (!isSelectionMode) {
+            enterSelectionMode();
+            toggleUserSelection(item.user_id.toString());
+          }
+        }}
+        onPress={() => {
+          if (isSelectionMode) {
+            toggleUserSelection(item.user_id.toString());
+          }
+        }}
+        activeOpacity={0.7}
+      >
+        <View style={[styles.userCard, { backgroundColor: colors.surface }]}>
+          {isSelectionMode && (
+            <TouchableOpacity
+              style={styles.checkbox}
+              onPress={() => toggleUserSelection(item.user_id.toString())}
+            >
+              <Ionicons
+                name={isSelected ? 'checkbox' : 'square-outline'}
+                size={24}
+                color={isSelected ? colors.primary : colors.textSecondary}
+              />
+            </TouchableOpacity>
+          )}
+          <View style={styles.userInfo}>
+            <Text style={[styles.userName, { color: colors.text }]}>{item.name}</Text>
+            <Text style={[styles.userEmail, { color: colors.textSecondary }]}>{item.email}</Text>
+            <Text style={[styles.userRole, {
+              color: item.role === 'admin' ? colors.error :
+                     item.role === 'owner' ? colors.primary : colors.success
+            }]}>
+              {item.role}
+            </Text>
+            <Text style={[styles.userStatus, {
+              color: item.status === 'active' ? colors.success : colors.warning
+            }]}>
+              {item.status}
+            </Text>
+          </View>
+
+          {!isSelectionMode && (
+            <View style={styles.userActions}>
+              <TouchableOpacity
+                style={styles.iconButton}
+                onPress={() => handleEditUser(item)}
+              >
+                <Ionicons name="pencil" size={20} color={colors.primary} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.iconButton}
+                onPress={() => handleToggleStatus(item)}
+              >
+                <Ionicons
+                  name={item.status === 'active' ? 'eye-off' : 'eye'}
+                  size={20}
+                  color={item.status === 'active' ? colors.warning : colors.success}
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.iconButton}
+                onPress={() => handleDeleteUser(item)}
+              >
+                <Ionicons name="trash" size={20} color={colors.error} />
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   const renderUserForm = (isEdit: boolean = false) => (
     <ScrollView style={styles.modalContent}>
@@ -313,6 +422,35 @@ const UserManagement: React.FC<UserManagementProps> = ({ navigation }) => {
         showsVerticalScrollIndicator={false}
       />
 
+      {isSelectionMode && (
+        <View style={styles.bulkActions}>
+          <TouchableOpacity
+            style={[styles.bulkButton, { backgroundColor: colors.success }]}
+            onPress={handleBulkActivate}
+          >
+            <Text style={styles.bulkButtonText}>Activate</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.bulkButton, { backgroundColor: colors.warning }]}
+            onPress={handleBulkDeactivate}
+          >
+            <Text style={styles.bulkButtonText}>Deactivate</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.bulkButton, { backgroundColor: colors.error }]}
+            onPress={handleBulkDelete}
+          >
+            <Text style={styles.bulkButtonText}>Delete</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.bulkButton, { backgroundColor: colors.surface }]}
+            onPress={exitSelectionMode}
+          >
+            <Text style={[styles.bulkButtonText, { color: colors.text }]}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Add User Modal */}
       <Modal
         visible={showAddModal}
@@ -397,18 +535,37 @@ const styles = StyleSheet.create({
   },
   userActions: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  actionButton: {
-    paddingHorizontal: Theme.spacing.md,
-    paddingVertical: Theme.spacing.sm,
-    borderRadius: Theme.borderRadius.sm,
-    minWidth: 80,
+    justifyContent: 'flex-end',
     alignItems: 'center',
   },
-  actionButtonText: {
+  iconButton: {
+    padding: Theme.spacing.sm,
+    marginHorizontal: Theme.spacing.xs,
+  },
+  checkbox: {
+    position: 'absolute',
+    top: Theme.spacing.sm,
+    right: Theme.spacing.sm,
+  },
+  bulkActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-around',
+    marginTop: Theme.spacing.lg,
+    paddingBottom: Theme.spacing.xl,
+  },
+  bulkButton: {
+    paddingHorizontal: Theme.spacing.md,
+    paddingVertical: Theme.spacing.sm,
+    borderRadius: Theme.borderRadius.md,
+    minWidth: 80,
+    alignItems: 'center',
+    margin: Theme.spacing.xs,
+  },
+  bulkButtonText: {
     fontSize: Theme.typography.fontSize.sm,
     fontWeight: Theme.typography.fontWeight.medium,
+    color: Theme.colors.background,
   },
   modalOverlay: {
     flex: 1,
