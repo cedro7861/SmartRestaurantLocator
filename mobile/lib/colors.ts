@@ -79,5 +79,5 @@ export const Theme = {
     },
   },
 } as const;
-
+                            
 export default Colors;
