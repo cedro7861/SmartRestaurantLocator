@@ -14,8 +14,14 @@ const app = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3003;
 
-app.use(cors());
+// app.use(cors());
 app.use(express.json());
+app.use(
+  cors({
+    origin: "*",
+  })
+);
+
 app.use("/api/users", userRoutes);
 app.use("/api/restaurants", restaurantRoutes);
 app.use("/api/menu", menuRoutes);
@@ -36,6 +42,6 @@ app.get("/users", async (req, res) => {
   }
 });
 
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server is running on http://0.0.0.0:${PORT}`);
 });
