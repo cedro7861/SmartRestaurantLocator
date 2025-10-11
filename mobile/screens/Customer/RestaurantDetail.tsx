@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Modal } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import { Theme } from '../../lib/colors';
 import { getRestaurantById, Restaurant, MenuItem } from '../../lib/api/restaurantApi';
 import { createOrder } from '../../lib/api/orderApi';
@@ -13,9 +14,16 @@ const RestaurantDetail: React.FC<RestaurantDetailProps> = ({ navigation, route }
   const { restaurant: initialRestaurant } = route.params;
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [loading, setLoading] = useState(true);
-  const [cart, setCart] = useState<Array<{ item: MenuItem; quantity: number; preferences: string }>>([]);
+  const [cart, setCart] = useState<Array<{ item: MenuItem; quantity: number; preferences: string; orderType: 'pickup' | 'delivery' | 'dine_in'; tableType?: string; persons?: number }>>([]);
   const [showCart, setShowCart] = useState(false);
   const [orderType, setOrderType] = useState<'pickup' | 'delivery' | 'dine_in'>('delivery');
+  const [showOrderModal, setShowOrderModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
+  const [modalQuantity, setModalQuantity] = useState(1);
+  const [modalOrderType, setModalOrderType] = useState<'pickup' | 'delivery' | 'dine_in'>('delivery');
+  const [modalTableType, setModalTableType] = useState<'indoor' | 'outdoor'>('indoor');
+  const [modalPersons, setModalPersons] = useState(1);
+  const [modalPreferences, setModalPreferences] = useState('');
   const { colors, spacing, borderRadius, typography } = Theme;
 
   useEffect(() => {
@@ -34,21 +42,42 @@ const RestaurantDetail: React.FC<RestaurantDetailProps> = ({ navigation, route }
   };
 
   const handleOrderItem = (item: MenuItem) => {
-    const existingItem = cart.find(cartItem => cartItem.item.id === item.id);
-    if (existingItem) {
-      setCart(cart.map(cartItem =>
-        cartItem.item.id === item.id
-          ? { ...cartItem, quantity: cartItem.quantity + 1 }
-          : cartItem
-      ));
-    } else {
-      setCart([...cart, { item, quantity: 1, preferences: '' }]);
+    setSelectedItem(item);
+    setModalQuantity(1);
+    setModalOrderType('delivery');
+    setModalTableType('indoor');
+    setModalPersons(1);
+    setModalPreferences('');
+    setShowOrderModal(true);
+  };
+
+  const handleAddToCart = () => {
+    if (!selectedItem) return;
+
+    let preferences = modalPreferences;
+    if (modalOrderType === 'dine_in') {
+      preferences = `Table: ${modalTableType}, Persons: ${modalPersons}${preferences ? `\n${preferences}` : ''}`;
     }
-    Alert.alert('Added to Cart', `${item.name} added to your cart`);
+
+    const cartItem = {
+      item: selectedItem,
+      quantity: modalQuantity,
+      preferences,
+      orderType: modalOrderType,
+      tableType: modalOrderType === 'dine_in' ? modalTableType : undefined,
+      persons: modalOrderType === 'dine_in' ? modalPersons : undefined,
+    };
+
+    setCart([...cart, cartItem]);
+    setShowOrderModal(false);
+    Alert.alert('Added to Cart', `${selectedItem.name} added to your cart`);
   };
 
   const handlePlaceOrder = async () => {
     if (cart.length === 0 || !restaurant) return;
+
+    // Use the orderType from the first cart item (assuming all same)
+    const orderType = cart[0].orderType;
 
     try {
       await createOrder({
@@ -56,7 +85,7 @@ const RestaurantDetail: React.FC<RestaurantDetailProps> = ({ navigation, route }
         items: cart.map(cartItem => ({
           item_id: cartItem.item.id,
           quantity: cartItem.quantity,
-          preferences: cartItem.preferences,
+          preferences: cartItem.preferences + (cartItem.tableType ? `\nTable Type: ${cartItem.tableType}` : ''),
         })),
         order_type: orderType,
       });
@@ -70,7 +99,7 @@ const RestaurantDetail: React.FC<RestaurantDetailProps> = ({ navigation, route }
   };
 
   const getTotalPrice = () => {
-    return cart.reduce((total, cartItem) => total + (cartItem.item.price * cartItem.quantity), 0);
+    return cart.reduce((total, cartItem) => total + (parseFloat(cartItem.item.price.toString()) * cartItem.quantity), 0);
   };
 
   if (loading) {
@@ -102,7 +131,7 @@ const RestaurantDetail: React.FC<RestaurantDetailProps> = ({ navigation, route }
             <View style={styles.menuItemContent}>
               <Text style={[styles.menuItemName, { color: colors.text }]}>{item.name}</Text>
               <Text style={[styles.menuItemDescription, { color: colors.textSecondary }]}>{item.description}</Text>
-              <Text style={[styles.menuItemPrice, { color: colors.primary }]}>${item.price}</Text>
+              <Text style={[styles.menuItemPrice, { color: colors.primary }]}>${parseFloat(item.price.toString()).toFixed(2)}</Text>
             </View>
             <TouchableOpacity
               style={[styles.orderButton, { backgroundColor: colors.primary }]}
@@ -116,35 +145,6 @@ const RestaurantDetail: React.FC<RestaurantDetailProps> = ({ navigation, route }
         <Text style={[styles.noMenuText, { color: colors.textSecondary }]}>No menu items available</Text>
       )}
 
-      {/* Order Type Selection */}
-      {cart.length > 0 && (
-        <View style={[styles.orderTypeSection, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Order Type</Text>
-          <View style={styles.orderTypeOptions}>
-            <TouchableOpacity
-              style={[styles.orderTypeOption, orderType === 'delivery' && styles.orderTypeOptionSelected]}
-              onPress={() => setOrderType('delivery')}
-            >
-              <Text style={[styles.orderTypeIcon, { color: orderType === 'delivery' ? colors.background : colors.primary }]}>🚚</Text>
-              <Text style={[styles.orderTypeText, { color: orderType === 'delivery' ? colors.background : colors.text }]}>Delivery</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.orderTypeOption, orderType === 'pickup' && styles.orderTypeOptionSelected]}
-              onPress={() => setOrderType('pickup')}
-            >
-              <Text style={[styles.orderTypeIcon, { color: orderType === 'pickup' ? colors.background : colors.primary }]}>🥡</Text>
-              <Text style={[styles.orderTypeText, { color: orderType === 'pickup' ? colors.background : colors.text }]}>Pickup</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.orderTypeOption, orderType === 'dine_in' && styles.orderTypeOptionSelected]}
-              onPress={() => setOrderType('dine_in')}
-            >
-              <Text style={[styles.orderTypeIcon, { color: orderType === 'dine_in' ? colors.background : colors.primary }]}>🍽️</Text>
-              <Text style={[styles.orderTypeText, { color: orderType === 'dine_in' ? colors.background : colors.text }]}>Dine In</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
 
       {cart.length > 0 && (
         <View style={[styles.cartSection, { backgroundColor: colors.surface }]}>
@@ -161,11 +161,23 @@ const RestaurantDetail: React.FC<RestaurantDetailProps> = ({ navigation, route }
             <View style={styles.cartItems}>
               {cart.map((cartItem, index) => (
                 <View key={index} style={styles.cartItem}>
-                  <Text style={[styles.cartItemName, { color: colors.text }]}>
-                    {cartItem.item.name} x{cartItem.quantity}
-                  </Text>
+                  <View style={styles.cartItemDetails}>
+                    <Text style={[styles.cartItemName, { color: colors.text }]}>
+                      {cartItem.item.name} x{cartItem.quantity}
+                    </Text>
+                    <Text style={[styles.cartItemType, { color: colors.textSecondary }]}>
+                      {cartItem.orderType.replace('_', ' ')}
+                      {cartItem.tableType ? ` • ${cartItem.tableType}` : ''}
+                      {cartItem.persons ? ` • ${cartItem.persons} person${cartItem.persons !== 1 ? 's' : ''}` : ''}
+                    </Text>
+                    {cartItem.preferences ? (
+                      <Text style={[styles.cartItemPreferences, { color: colors.textSecondary }]}>
+                        Note: {cartItem.preferences}
+                      </Text>
+                    ) : null}
+                  </View>
                   <Text style={[styles.cartItemPrice, { color: colors.primary }]}>
-                    ${(cartItem.item.price * cartItem.quantity).toFixed(2)}
+                    ${(parseFloat(cartItem.item.price.toString()) * cartItem.quantity).toFixed(2)}
                   </Text>
                 </View>
               ))}
@@ -186,6 +198,139 @@ const RestaurantDetail: React.FC<RestaurantDetailProps> = ({ navigation, route }
       >
         <Text style={[styles.backButtonText, { color: colors.background }]}>Back to Map</Text>
       </TouchableOpacity>
+
+      {/* Order Modal */}
+      <Modal
+        visible={showOrderModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowOrderModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScrollContent}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
+                Order {selectedItem?.name}
+              </Text>
+
+              {/* Quantity */}
+              <View style={styles.modalSection}>
+                <Text style={[styles.modalSectionTitle, { color: colors.text }]}>Quantity</Text>
+                <View style={styles.quantitySelector}>
+                  <TouchableOpacity
+                    style={[styles.quantityButton, { backgroundColor: colors.primary }]}
+                    onPress={() => setModalQuantity(Math.max(1, modalQuantity - 1))}
+                  >
+                    <Text style={[styles.quantityButtonText, { color: colors.background }]}>-</Text>
+                  </TouchableOpacity>
+                  <Text style={[styles.quantityText, { color: colors.text }]}>{modalQuantity}</Text>
+                  <TouchableOpacity
+                    style={[styles.quantityButton, { backgroundColor: colors.primary }]}
+                    onPress={() => setModalQuantity(modalQuantity + 1)}
+                  >
+                    <Text style={[styles.quantityButtonText, { color: colors.background }]}>+</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Order Type */}
+              <View style={styles.modalSection}>
+                <Text style={[styles.modalSectionTitle, { color: colors.text }]}>Order Type</Text>
+                <View style={styles.orderTypeOptions}>
+                  {(['delivery', 'pickup', 'dine_in'] as const).map((type) => (
+                    <TouchableOpacity
+                      key={type}
+                      style={[styles.modalOrderTypeOption, modalOrderType === type && styles.modalOrderTypeSelected]}
+                      onPress={() => setModalOrderType(type)}
+                    >
+                      <Text style={[styles.modalOrderTypeIcon, { color: modalOrderType === type ? colors.background : colors.primary }]}>
+                        {type === 'delivery' ? '🚚' : type === 'pickup' ? '🥡' : '🍽️'}
+                      </Text>
+                      <Text style={[styles.modalOrderTypeText, { color: modalOrderType === type ? colors.background : colors.text }]}>
+                        {type.replace('_', ' ')}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Table Preferences for Dine-in */}
+              {modalOrderType === 'dine_in' && (
+                <View style={styles.modalSection}>
+                  <Text style={[styles.modalSectionTitle, { color: colors.text }]}>Table Preferences</Text>
+
+                  {/* Table Type */}
+                  <View style={styles.pickerContainer}>
+                    <Text style={[styles.pickerLabel, { color: colors.text }]}>Table Location</Text>
+                    <View style={[styles.pickerWrapper, { borderColor: colors.border }]}>
+                      <Picker
+                        selectedValue={modalTableType}
+                        onValueChange={(itemValue) => setModalTableType(itemValue)}
+                        style={[styles.picker, { color: colors.text }]}
+                        dropdownIconColor={colors.primary}
+                      >
+                        <Picker.Item label="Indoor" value="indoor" />
+                        <Picker.Item label="Outdoor" value="outdoor" />
+                      </Picker>
+                    </View>
+                  </View>
+
+                  {/* Number of Persons */}
+                  <View style={styles.pickerContainer}>
+                    <Text style={[styles.pickerLabel, { color: colors.text }]}>Number of Persons</Text>
+                    <View style={styles.personsSelector}>
+                      <TouchableOpacity
+                        style={[styles.personButton, { backgroundColor: colors.primary }]}
+                        onPress={() => setModalPersons(Math.max(1, modalPersons - 1))}
+                      >
+                        <Text style={[styles.personButtonText, { color: colors.background }]}>-</Text>
+                      </TouchableOpacity>
+                      <Text style={[styles.personText, { color: colors.text }]}>{modalPersons}</Text>
+                      <TouchableOpacity
+                        style={[styles.personButton, { backgroundColor: colors.primary }]}
+                        onPress={() => setModalPersons(Math.min(20, modalPersons + 1))}
+                      >
+                        <Text style={[styles.personButtonText, { color: colors.background }]}>+</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              )}
+
+              {/* Special Instructions */}
+              <View style={styles.modalSection}>
+                <Text style={[styles.modalSectionTitle, { color: colors.text }]}>Special Instructions</Text>
+                <TextInput
+                  style={[styles.modalTextInput, { borderColor: colors.border, color: colors.text }]}
+                  placeholder="Any special requests or preferences..."
+                  placeholderTextColor={colors.textSecondary}
+                  value={modalPreferences}
+                  onChangeText={setModalPreferences}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                />
+              </View>
+            </ScrollView>
+
+            {/* Buttons - Fixed at bottom */}
+            <View style={[styles.modalButtons, { borderTopColor: colors.border }]}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancelButton, { borderColor: colors.border }]}
+                onPress={() => setShowOrderModal(false)}
+              >
+                <Text style={[styles.modalButtonText, { color: colors.text }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalAddButton, { backgroundColor: colors.primary }]}
+                onPress={handleAddToCart}
+              >
+                <Text style={[styles.modalButtonText, { color: colors.background }]}>Add to Cart</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 };
@@ -297,12 +442,27 @@ const styles = StyleSheet.create({
   cartItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Theme.spacing.sm,
+    alignItems: 'flex-start',
+    marginBottom: Theme.spacing.md,
+    paddingBottom: Theme.spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: Theme.colors.border,
+  },
+  cartItemDetails: {
+    flex: 1,
   },
   cartItemName: {
     fontSize: Theme.typography.fontSize.md,
-    flex: 1,
+    fontWeight: Theme.typography.fontWeight.medium,
+    marginBottom: Theme.spacing.xs,
+  },
+  cartItemType: {
+    fontSize: Theme.typography.fontSize.sm,
+    marginBottom: Theme.spacing.xs,
+  },
+  cartItemPreferences: {
+    fontSize: Theme.typography.fontSize.sm,
+    fontStyle: 'italic',
   },
   cartItemPrice: {
     fontSize: Theme.typography.fontSize.md,
@@ -354,6 +514,176 @@ const styles = StyleSheet.create({
   orderTypeText: {
     fontSize: Theme.typography.fontSize.sm,
     fontWeight: Theme.typography.fontWeight.medium,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '90%',
+    maxHeight: '80%',
+    borderRadius: Theme.borderRadius.lg,
+    elevation: 5,
+  },
+  modalScrollContent: {
+    padding: Theme.spacing.lg,
+  },
+  modalTitle: {
+    fontSize: Theme.typography.fontSize.xl,
+    fontWeight: Theme.typography.fontWeight.bold,
+    marginBottom: Theme.spacing.lg,
+    textAlign: 'center',
+  },
+  modalSection: {
+    marginBottom: Theme.spacing.lg,
+  },
+  modalSectionTitle: {
+    fontSize: Theme.typography.fontSize.md,
+    fontWeight: Theme.typography.fontWeight.medium,
+    marginBottom: Theme.spacing.md,
+  },
+  quantitySelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quantityButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quantityButtonText: {
+    fontSize: Theme.typography.fontSize.lg,
+    fontWeight: Theme.typography.fontWeight.bold,
+  },
+  quantityText: {
+    fontSize: Theme.typography.fontSize.lg,
+    fontWeight: Theme.typography.fontWeight.bold,
+    marginHorizontal: Theme.spacing.lg,
+    minWidth: 30,
+    textAlign: 'center',
+  },
+  modalOrderTypeOption: {
+    flex: 1,
+    alignItems: 'center',
+    padding: Theme.spacing.md,
+    borderRadius: Theme.borderRadius.md,
+    borderWidth: 2,
+    borderColor: Theme.colors.border,
+    marginHorizontal: Theme.spacing.xs,
+    backgroundColor: Theme.colors.background,
+  },
+  modalOrderTypeSelected: {
+    backgroundColor: Theme.colors.primary,
+    borderColor: Theme.colors.primary,
+  },
+  modalOrderTypeIcon: {
+    fontSize: Theme.typography.fontSize.xl,
+    marginBottom: Theme.spacing.xs,
+  },
+  modalOrderTypeText: {
+    fontSize: Theme.typography.fontSize.sm,
+    fontWeight: Theme.typography.fontWeight.medium,
+  },
+  tableTypeOptions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  tableTypeOption: {
+    flex: 1,
+    padding: Theme.spacing.md,
+    borderRadius: Theme.borderRadius.md,
+    borderWidth: 2,
+    borderColor: Theme.colors.border,
+    alignItems: 'center',
+    marginHorizontal: Theme.spacing.xs,
+    backgroundColor: Theme.colors.background,
+  },
+  tableTypeSelected: {
+    backgroundColor: Theme.colors.primary,
+    borderColor: Theme.colors.primary,
+  },
+  tableTypeText: {
+    fontSize: Theme.typography.fontSize.sm,
+    fontWeight: Theme.typography.fontWeight.medium,
+  },
+  modalTextInput: {
+    borderWidth: 1,
+    borderRadius: Theme.borderRadius.md,
+    padding: Theme.spacing.md,
+    fontSize: Theme.typography.fontSize.md,
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingTop: Theme.spacing.lg,
+    borderTopWidth: 1,
+    marginTop: Theme.spacing.lg,
+  },
+  modalButton: {
+    flex: 1,
+    padding: Theme.spacing.md,
+    borderRadius: Theme.borderRadius.md,
+    alignItems: 'center',
+    marginHorizontal: Theme.spacing.sm,
+  },
+  modalCancelButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+  },
+  modalAddButton: {
+    // backgroundColor set in component
+  },
+  modalButtonText: {
+    fontSize: Theme.typography.fontSize.md,
+    fontWeight: Theme.typography.fontWeight.medium,
+  },
+  pickerContainer: {
+    marginBottom: Theme.spacing.lg,
+  },
+  pickerLabel: {
+    fontSize: Theme.typography.fontSize.md,
+    fontWeight: Theme.typography.fontWeight.medium,
+    marginBottom: Theme.spacing.sm,
+  },
+  pickerWrapper: {
+    borderWidth: 1,
+    borderRadius: Theme.borderRadius.md,
+    backgroundColor: Theme.colors.surface,
+  },
+  picker: {
+    height: 50,
+  },
+  personsSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: Theme.spacing.sm,
+  },
+  personButton: {
+    width: 35,
+    height: 35,
+    borderRadius: 17.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  personButtonText: {
+    fontSize: Theme.typography.fontSize.lg,
+    fontWeight: Theme.typography.fontWeight.bold,
+  },
+  personText: {
+    fontSize: Theme.typography.fontSize.lg,
+    fontWeight: Theme.typography.fontWeight.bold,
+    marginHorizontal: Theme.spacing.lg,
+    minWidth: 30,
+    textAlign: 'center',
   },
 });
 

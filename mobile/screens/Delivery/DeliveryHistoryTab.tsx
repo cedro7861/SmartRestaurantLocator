@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { Theme } from '../../lib/colors';
 import { getDeliveryHistory, Order } from '../../lib/api/orderApi';
 
@@ -30,7 +30,7 @@ const DeliveryHistoryTab: React.FC<DeliveryHistoryTabProps> = ({ navigation, use
 
   const calculateStats = () => {
     const totalDeliveries = deliveryHistory.length;
-    const totalEarnings = deliveryHistory.reduce((sum, order) => sum + order.total_price, 0);
+    const totalEarnings = deliveryHistory.reduce((sum, order) => sum + Number(order.total_price), 0);
     const averageEarnings = totalDeliveries > 0 ? totalEarnings / totalDeliveries : 0;
     const todayDeliveries = deliveryHistory.filter(order => {
       const orderDate = new Date(order.order_time).toDateString();

@@ -7,6 +7,7 @@ import restaurantRoutes from "./src/routes/restaurantRoutes.js";
 import menuRoutes from "./src/routes/menuRoutes.js";
 import orderRoutes from "./src/routes/orderRoutes.js";
 import notificationRoutes from "./src/routes/notificationRoutes.js";
+import deliveryRoutes from "./src/routes/deliveryRoutes.js";
 
 dotenv.config();
 
@@ -26,6 +27,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/restaurants", restaurantRoutes);
 app.use("/api/menu", menuRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/deliveries", deliveryRoutes);
 app.use("/api/notifications", notificationRoutes);
 // Root test route
 app.get("/", (req, res) => {

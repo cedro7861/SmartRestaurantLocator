@@ -44,8 +44,23 @@ export interface Order {
   restaurant: {
     name: string;
     location?: string;
+    contact_info?: string;
+    owner?: {
+      name: string;
+      email: string;
+      phone?: string;
+    };
   };
   order_items: OrderItem[];
+  deliveries?: Array<{
+    delivery_id: number;
+    status: 'pending' | 'on_route' | 'delivered';
+    delivery_person?: {
+      user_id: number;
+      name: string;
+      phone?: string;
+    };
+  }>;
 }
 
 export const getCustomerOrders = async (): Promise<Order[]> => {

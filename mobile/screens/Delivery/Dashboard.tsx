@@ -185,7 +185,7 @@ const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({ navigation, user,
           </View>
         );
       case 'earnings':
-        const totalEarnings = deliveryHistory.reduce((sum, order) => sum + order.total_price, 0);
+        const totalEarnings = deliveryHistory.reduce((sum, order) => sum + Number(order.total_price), 0);
         const completedDeliveries = deliveryHistory.length;
         const averageEarnings = completedDeliveries > 0 ? totalEarnings / completedDeliveries : 0;
 

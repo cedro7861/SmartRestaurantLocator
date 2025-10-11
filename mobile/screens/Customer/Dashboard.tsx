@@ -1,11 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TextInput, Linking } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { Theme } from '../../lib/colors';
 import { getRestaurants, Restaurant } from '../../lib/api/restaurantApi';
 import { getCustomerOrders, Order } from '../../lib/api/orderApi';
 import { updateProfile, changePassword } from '../../lib/api/userApi';
+
+type RestaurantWithDistance = Restaurant & { distance: number | null };
+
+// Utility functions for distance calculation
+const deg2rad = (deg: number): number => {
+  return deg * (Math.PI / 180);
+};
+
+const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  const R = 6371; // Radius of the earth in km
+  const dLat = deg2rad(lat2 - lat1);
+  const dLon = deg2rad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const d = R * c; // Distance in km
+  return d;
+};
 
 interface CustomerDashboardProps {
   navigation: any;
@@ -33,6 +52,15 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ navigation, user,
     loadRestaurants();
     loadOrders();
     getCurrentLocation();
+
+    // Set up polling for delivery updates every 30 seconds
+    const deliveryPollingInterval = setInterval(() => {
+      loadOrders();
+    }, 30000); // 30 seconds
+
+    return () => {
+      clearInterval(deliveryPollingInterval);
+    };
   }, []);
 
   const loadRestaurants = async () => {
@@ -127,6 +155,60 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ navigation, user,
     navigation.navigate('RestaurantDetail', { restaurant });
   };
 
+  const handleCallRestaurant = (order: Order) => {
+    // Try owner's phone first, then restaurant contact_info as fallback
+    const phoneNumber = order.restaurant.owner?.phone || order.restaurant.contact_info;
+
+    if (phoneNumber) {
+      // Clean the phone number (remove any non-numeric characters except +)
+      const cleanPhoneNumber = phoneNumber.replace(/[^\d+]/g, '');
+      const url = `tel:${cleanPhoneNumber}`;
+
+      Linking.canOpenURL(url).then(supported => {
+        if (supported) {
+          Linking.openURL(url);
+        } else {
+          Alert.alert('Error', 'Phone calls are not supported on this device');
+        }
+      }).catch(() => {
+        Alert.alert('Error', 'Unable to make phone call. Please check the phone number format.');
+      });
+    } else {
+      Alert.alert(
+        'Contact Unavailable',
+        'Restaurant contact information is not available at this time. Please try again later or contact support.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
+  const handleCallDeliveryPerson = (order: Order) => {
+    const delivery = order.deliveries?.[0];
+    const phoneNumber = delivery?.delivery_person?.phone;
+
+    if (phoneNumber) {
+      // Clean the phone number (remove any non-numeric characters except +)
+      const cleanPhoneNumber = phoneNumber.replace(/[^\d+]/g, '');
+      const url = `tel:${cleanPhoneNumber}`;
+
+      Linking.canOpenURL(url).then(supported => {
+        if (supported) {
+          Linking.openURL(url);
+        } else {
+          Alert.alert('Error', 'Phone calls are not supported on this device');
+        }
+      }).catch(() => {
+        Alert.alert('Error', 'Unable to make phone call. Please check the phone number format.');
+      });
+    } else {
+      Alert.alert(
+        'Contact Unavailable',
+        'Delivery person contact information is not available at this time.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'map':
@@ -134,8 +216,29 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ navigation, user,
           const lat = parseFloat(restaurant.latitude || '');
           const lng = parseFloat(restaurant.longitude || '');
           return !isNaN(lat) && !isNaN(lng) &&
-                 lat >= -90 && lat <= 90 &&
-                 lng >= -180 && lng <= 180;
+                  lat >= -90 && lat <= 90 &&
+                  lng >= -180 && lng <= 180;
+        });
+
+        // Add distance to each restaurant and sort by distance
+        const restaurantsWithDistance: RestaurantWithDistance[] = validRestaurants.map((restaurant) => {
+          let distance: number | null = null;
+          if (location) {
+            const restLat = parseFloat(restaurant.latitude || '0');
+            const restLng = parseFloat(restaurant.longitude || '0');
+            distance = calculateDistance(
+              location.coords.latitude,
+              location.coords.longitude,
+              restLat,
+              restLng
+            );
+          }
+          return { ...restaurant, distance };
+        }).sort((a, b) => {
+          if (a.distance === null && b.distance === null) return 0;
+          if (a.distance === null) return 1;
+          if (b.distance === null) return -1;
+          return a.distance - b.distance;
         });
 
         return (
@@ -145,10 +248,10 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ navigation, user,
                 Nearby Restaurants
               </Text>
               <Text style={[styles.restaurantCount, { color: colors.textSecondary }]}>
-                {validRestaurants.length} restaurant{validRestaurants.length !== 1 ? 's' : ''} found
+                {restaurantsWithDistance.length} restaurant{restaurantsWithDistance.length !== 1 ? 's' : ''} found
               </Text>
 
-              {validRestaurants.length > 0 && (
+              {restaurantsWithDistance.length > 0 && (
                 <View style={styles.viewToggle}>
                   <TouchableOpacity
                     style={[styles.toggleButton, mapView && styles.toggleButtonActive]}
@@ -170,7 +273,7 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ navigation, user,
               )}
             </View>
 
-            {validRestaurants.length === 0 && !loading ? (
+            {restaurantsWithDistance.length === 0 && !loading ? (
               <View style={styles.noRestaurantsContainer}>
                 <Text style={[styles.noRestaurantsText, { color: colors.textSecondary }]}>
                   No restaurants with location data available
@@ -197,7 +300,7 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ navigation, user,
                     zoomEnabled
                     scrollEnabled
                   >
-                    {validRestaurants.map((restaurant) => (
+                    {restaurantsWithDistance.map((restaurant) => (
                       <Marker
                         key={restaurant.id}
                         coordinate={{
@@ -205,7 +308,7 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ navigation, user,
                           longitude: parseFloat(restaurant.longitude || '0'),
                         }}
                         title={restaurant.name}
-                        description={`${restaurant.location} • Tap to view menu & order`}
+                        description={`${restaurant.location}${restaurant.distance !== null ? ` • ${restaurant.distance.toFixed(1)} km away` : ''} • Tap to view menu & order`}
                         pinColor={colors.primary}
                         onPress={() => handleRestaurantPress(restaurant)}
                       />
@@ -216,7 +319,7 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ navigation, user,
                     <Text style={[styles.loadingText, { color: colors.text }]}>
                       {loading ? 'Getting your location...' : 'Location not available'}
                     </Text>
-                    {validRestaurants.length > 0 && (
+                    {restaurantsWithDistance.length > 0 && (
                       <Text style={[styles.locationNote, { color: colors.textSecondary }]}>
                         Showing all restaurants on map
                       </Text>
@@ -233,7 +336,7 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ navigation, user,
             ) : (
               // List View
               <ScrollView style={styles.listContainer} showsVerticalScrollIndicator={false}>
-                {validRestaurants.map((restaurant) => (
+                {restaurantsWithDistance.map((restaurant) => (
                   <TouchableOpacity
                     key={restaurant.id}
                     style={[styles.restaurantCard, { backgroundColor: colors.surface }]}
@@ -246,6 +349,11 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ navigation, user,
                       <Text style={[styles.restaurantCardLocation, { color: colors.textSecondary }]}>
                         📍 {restaurant.location}
                       </Text>
+                      {restaurant.distance !== null && (
+                        <Text style={[styles.restaurantCardDistance, { color: colors.primary }]}>
+                          📏 {restaurant.distance.toFixed(1)} km away
+                        </Text>
+                      )}
                       {restaurant.contact_info && (
                         <Text style={[styles.restaurantCardContact, { color: colors.textSecondary }]}>
                           📞 {restaurant.contact_info}
@@ -268,7 +376,7 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ navigation, user,
           <View style={styles.tabContent}>
             <Text style={[styles.tabTitle, { color: colors.text }]}>My Orders</Text>
             <Text style={[styles.tabDescription, { color: colors.textSecondary }]}>
-              Your order history and current orders.
+              Your order history and current orders with real-time delivery tracking.
             </Text>
             {orders.length === 0 ? (
               <Text style={[styles.noOrdersText, { color: colors.textSecondary }]}>
@@ -278,25 +386,119 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ navigation, user,
               orders.map((order) => (
                 <View key={order.id} style={[styles.orderCard, { backgroundColor: colors.surface }]}>
                   <View style={styles.orderHeader}>
-                    <Text style={[styles.restaurantName, { color: colors.text }]}>
-                      {order.restaurant.name}
+                    <View style={styles.orderHeaderLeft}>
+                      <Text style={[styles.restaurantName, { color: colors.text }]}>
+                        {order.restaurant.name}
+                      </Text>
+                      <Text style={[styles.restaurantLocation, { color: colors.textSecondary }]}>
+                        📍 {order.restaurant.location || 'Location not specified'}
+                      </Text>
+                    </View>
+                    <View style={styles.orderHeaderRight}>
+                      <Text style={[styles.orderStatus, {
+                        color: order.status === 'delivered' ? colors.success :
+                               order.status === 'pending' ? colors.warning :
+                               order.status === 'confirmed' ? colors.info :
+                               order.status === 'preparing' ? colors.warning :
+                               order.status === 'ready' ? colors.primary :
+                               order.status === 'delivering' ? colors.primary : colors.error
+                      }]}>
+                        {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                      </Text>
+                      <TouchableOpacity
+                        style={[styles.callButton, { backgroundColor: colors.success }]}
+                        onPress={() => handleCallRestaurant(order)}
+                      >
+                        <Text style={[styles.callButtonText, { color: colors.background }]}>
+                          📞 Call
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  <View style={styles.orderDetails}>
+                    <Text style={[styles.orderTime, { color: colors.textSecondary }]}>
+                      📅 {new Date(order.order_time).toLocaleDateString()} at {new Date(order.order_time).toLocaleTimeString()}
                     </Text>
-                    <Text style={[styles.orderStatus, {
-                      color: order.status === 'delivered' ? colors.success :
-                             order.status === 'pending' ? colors.warning : colors.primary
-                    }]}>
-                      {order.status}
+                    <Text style={[styles.orderType, { color: colors.primary }]}>
+                      📋 {order.order_type.replace('_', ' ').toUpperCase()}
                     </Text>
                   </View>
-                  <Text style={[styles.orderTime, { color: colors.textSecondary }]}>
-                    {new Date(order.order_time).toLocaleDateString()}
-                  </Text>
-                  <Text style={[styles.orderTotal, { color: colors.primary }]}>
-                    Total: ${order.total_price}
-                  </Text>
-                  <Text style={[styles.orderItems, { color: colors.textSecondary }]}>
-                    {order.order_items.length} item{order.order_items.length !== 1 ? 's' : ''}
-                  </Text>
+
+                  <View style={styles.orderItemsSection}>
+                    <Text style={[styles.orderItemsTitle, { color: colors.text }]}>Items Ordered:</Text>
+                    {order.order_items.map((item, index) => (
+                      <View key={index} style={styles.orderItem}>
+                        <Text style={[styles.orderItemName, { color: colors.text }]}>
+                          {item.item.name} x{item.quantity}
+                        </Text>
+                        <Text style={[styles.orderItemPrice, { color: colors.primary }]}>
+                          ${(parseFloat(item.item.price.toString()) * item.quantity).toFixed(2)}
+                        </Text>
+                      </View>
+                    ))}
+                    {order.order_items.some(item => item.preferences) && (
+                      <View style={styles.orderPreferences}>
+                        <Text style={[styles.orderPreferencesTitle, { color: colors.textSecondary }]}>
+                          Special Instructions:
+                        </Text>
+                        {order.order_items
+                          .filter(item => item.preferences)
+                          .map((item, index) => (
+                            <Text key={index} style={[styles.orderPreferenceText, { color: colors.textSecondary }]}>
+                              • {item.item.name}: {item.preferences}
+                            </Text>
+                          ))}
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Delivery Tracking for Delivery Orders */}
+                  {order.order_type === 'delivery' && order.deliveries && order.deliveries.length > 0 && (
+                    <View style={styles.deliveryTracking}>
+                      <Text style={[styles.deliveryTrackingTitle, { color: colors.text }]}>
+                        🚚 Delivery Tracking
+                      </Text>
+                      {order.deliveries.map((delivery, index) => (
+                        <View key={index} style={styles.deliveryInfo}>
+                          <View style={styles.deliveryStatusRow}>
+                            <Text style={[styles.deliveryStatus, {
+                              color: delivery.status === 'delivered' ? colors.success :
+                                     delivery.status === 'on_route' ? colors.primary : colors.warning
+                            }]}>
+                              {delivery.status === 'pending' ? '⏳ Awaiting Assignment' :
+                               delivery.status === 'on_route' ? '🚴 On the Way' :
+                               delivery.status === 'delivered' ? '✅ Delivered' : delivery.status}
+                            </Text>
+                            {delivery.delivery_person && (
+                              <TouchableOpacity
+                                style={[styles.callDeliveryButton, { backgroundColor: colors.success }]}
+                                onPress={() => handleCallDeliveryPerson(order)}
+                              >
+                                <Text style={[styles.callDeliveryButtonText, { color: colors.background }]}>
+                                  📞 Call {delivery.delivery_person.name}
+                                </Text>
+                              </TouchableOpacity>
+                            )}
+                          </View>
+                          {delivery.delivery_person && (
+                            <Text style={[styles.deliveryPersonInfo, { color: colors.textSecondary }]}>
+                              Delivery by: {delivery.delivery_person.name}
+                            </Text>
+                          )}
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  <View style={styles.orderFooter}>
+                    <Text style={[styles.orderTotal, { color: colors.primary }]}>
+                      Total: ${parseFloat(order.total_price.toString()).toFixed(2)}
+                    </Text>
+                    <Text style={[styles.orderItemsCount, { color: colors.textSecondary }]}>
+                      {order.order_items.length} item{order.order_items.length !== 1 ? 's' : ''}
+                    </Text>
+                  </View>
                 </View>
               ))
             )}
@@ -493,15 +695,15 @@ const styles = StyleSheet.create({
   },
   orderCard: {
     padding: Theme.spacing.lg,
-    marginBottom: Theme.spacing.md,
+    marginBottom: Theme.spacing.lg,
     borderRadius: Theme.borderRadius.lg,
-    elevation: 2,
+    elevation: 3,
   },
   orderHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Theme.spacing.xs,
+    alignItems: 'flex-start',
+    marginBottom: Theme.spacing.md,
   },
   restaurantName: {
     fontSize: Theme.typography.fontSize.lg,
@@ -523,6 +725,125 @@ const styles = StyleSheet.create({
   },
   orderItems: {
     fontSize: Theme.typography.fontSize.sm,
+  },
+  orderHeaderLeft: {
+    flex: 1,
+  },
+  orderHeaderRight: {
+    alignItems: 'flex-end',
+  },
+  restaurantLocation: {
+    fontSize: Theme.typography.fontSize.sm,
+    marginTop: Theme.spacing.xs,
+  },
+  callButton: {
+    paddingHorizontal: Theme.spacing.md,
+    paddingVertical: Theme.spacing.sm,
+    borderRadius: Theme.borderRadius.md,
+    marginTop: Theme.spacing.sm,
+  },
+  callButtonText: {
+    fontSize: Theme.typography.fontSize.sm,
+    fontWeight: Theme.typography.fontWeight.medium,
+  },
+  orderDetails: {
+    marginTop: Theme.spacing.md,
+    paddingTop: Theme.spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: Theme.colors.border,
+  },
+  orderType: {
+    fontSize: Theme.typography.fontSize.sm,
+    fontWeight: Theme.typography.fontWeight.medium,
+    marginTop: Theme.spacing.xs,
+  },
+  orderItemsSection: {
+    marginTop: Theme.spacing.md,
+  },
+  orderItemsTitle: {
+    fontSize: Theme.typography.fontSize.md,
+    fontWeight: Theme.typography.fontWeight.medium,
+    marginBottom: Theme.spacing.sm,
+  },
+  orderItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Theme.spacing.xs,
+    paddingLeft: Theme.spacing.md,
+  },
+  orderItemName: {
+    fontSize: Theme.typography.fontSize.md,
+    flex: 1,
+  },
+  orderItemPrice: {
+    fontSize: Theme.typography.fontSize.md,
+    fontWeight: Theme.typography.fontWeight.medium,
+  },
+  orderPreferences: {
+    marginTop: Theme.spacing.sm,
+    paddingLeft: Theme.spacing.md,
+  },
+  orderPreferencesTitle: {
+    fontSize: Theme.typography.fontSize.sm,
+    fontWeight: Theme.typography.fontWeight.medium,
+    marginBottom: Theme.spacing.xs,
+  },
+  orderPreferenceText: {
+    fontSize: Theme.typography.fontSize.sm,
+    fontStyle: 'italic',
+    marginBottom: Theme.spacing.xs,
+  },
+  orderFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: Theme.spacing.md,
+    paddingTop: Theme.spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: Theme.colors.border,
+  },
+  orderItemsCount: {
+    fontSize: Theme.typography.fontSize.sm,
+  },
+  deliveryTracking: {
+    marginTop: Theme.spacing.md,
+    paddingTop: Theme.spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: Theme.colors.border,
+  },
+  deliveryTrackingTitle: {
+    fontSize: Theme.typography.fontSize.md,
+    fontWeight: Theme.typography.fontWeight.bold,
+    marginBottom: Theme.spacing.sm,
+  },
+  deliveryInfo: {
+    backgroundColor: Theme.colors.surface,
+    padding: Theme.spacing.sm,
+    borderRadius: Theme.borderRadius.md,
+    marginBottom: Theme.spacing.sm,
+  },
+  deliveryStatusRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Theme.spacing.xs,
+  },
+  deliveryStatus: {
+    fontSize: Theme.typography.fontSize.md,
+    fontWeight: Theme.typography.fontWeight.medium,
+  },
+  deliveryPersonInfo: {
+    fontSize: Theme.typography.fontSize.sm,
+  },
+  callDeliveryButton: {
+    paddingHorizontal: Theme.spacing.sm,
+    paddingVertical: Theme.spacing.xs,
+    borderRadius: Theme.borderRadius.sm,
+  },
+  callDeliveryButtonText: {
+    fontSize: Theme.typography.fontSize.sm,
+    fontWeight: Theme.typography.fontWeight.medium,
   },
   logoutText: {
     fontSize: Theme.typography.fontSize.md,
@@ -661,6 +982,11 @@ const styles = StyleSheet.create({
   },
   restaurantCardLocation: {
     fontSize: Theme.typography.fontSize.md,
+    marginBottom: Theme.spacing.xs,
+  },
+  restaurantCardDistance: {
+    fontSize: Theme.typography.fontSize.sm,
+    fontWeight: Theme.typography.fontWeight.medium,
     marginBottom: Theme.spacing.xs,
   },
   restaurantCardContact: {

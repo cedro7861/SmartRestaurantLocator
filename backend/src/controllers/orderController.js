@@ -10,7 +10,7 @@ export const getCustomerOrders = async (req, res) => {
       where: { customer_id: customerId },
       include: {
         restaurant: {
-          select: { name: true, location: true }
+          select: { name: true, location: true, contact_info: true }
         },
         order_items: {
           include: {
@@ -103,6 +103,13 @@ export const createOrder = async (req, res) => {
           include: {
             item: true
           }
+        },
+        deliveries: {
+          include: {
+            delivery_person: {
+              select: { user_id: true, name: true, phone: true }
+            }
+          }
         }
       }
     });
@@ -122,7 +129,12 @@ export const getAllOrders = async (req, res) => {
           select: { name: true, email: true, phone: true }
         },
         restaurant: {
-          select: { name: true, location: true }
+          select: { name: true, location: true, contact_info: true },
+          include: {
+            owner: {
+              select: { name: true, email: true, phone: true }
+            }
+          }
         },
         order_items: {
           include: {
@@ -148,7 +160,7 @@ export const getAvailableDeliveries = async (req, res) => {
           select: { name: true, email: true, phone: true }
         },
         restaurant: {
-          select: { name: true, location: true }
+          select: { name: true, location: true, contact_info: true, owner: { select: { name: true, email: true, phone: true } } }
         },
         order_items: {
           include: {
@@ -180,7 +192,7 @@ export const getDeliveryHistory = async (req, res) => {
               select: { name: true, email: true, phone: true }
             },
             restaurant: {
-              select: { name: true, location: true }
+              select: { name: true, location: true, contact_info: true }
             },
             order_items: {
               include: {
