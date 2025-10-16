@@ -72,7 +72,7 @@ export const updateProfile = async (data: {
   name?: string;
   email?: string;
   phone?: string;
-}): Promise<any> => {
+}): Promise<{ message: string; user: any; token: string }> => {
   const response = await api.put('/users/profile', data);
   return response.data;
 };

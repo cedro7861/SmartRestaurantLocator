@@ -14,7 +14,7 @@ interface AdminDashboardProps {
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigation, user, onLogout }) => {
   const { colors, spacing, borderRadius, typography } = Theme;
-  const [activeTab, setActiveTab] = useState('Users');
+  const [activeTab, setActiveTab] = useState('Home');
   const [users, setUsers] = useState<User[]>([]);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -24,6 +24,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigation, user, onLog
   const [confirmPassword, setConfirmPassword] = useState('');
 
   const tabs = [
+    { name: 'Home', icon: 'home' },
     { name: 'Users', icon: 'people', screen: 'UserManagement' },
     { name: 'Restaurants', icon: 'restaurant' },
     { name: 'Orders', icon: 'clipboard' },
@@ -31,7 +32,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigation, user, onLog
   ];
 
   useEffect(() => {
-    if (activeTab === 'Users') {
+    if (activeTab === 'Home') {
+      loadDashboardData();
+    } else if (activeTab === 'Users') {
       loadUsers();
     } else if (activeTab === 'Restaurants') {
       loadRestaurants();
@@ -70,7 +73,28 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigation, user, onLog
       const orderData = await getAllOrders();
       setOrders(orderData);
     } catch (error) {
-      Alert.alert('Error', 'Failed to load orders');
+      console.log('Failed to load orders:', error);
+      // Don't show alert for orders loading, just log it
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadDashboardData = async () => {
+    setLoading(true);
+    try {
+      // Load all data for dashboard overview
+      const [userData, restaurantData, orderData] = await Promise.all([
+        getUsers(),
+        getAllRestaurants(),
+        getAllOrders()
+      ]);
+      setUsers(userData);
+      setRestaurants(restaurantData);
+      setOrders(orderData);
+    } catch (error) {
+      console.log('Failed to load dashboard data:', error);
+      // Don't show alert for dashboard data loading, just log it
     } finally {
       setLoading(false);
     }
@@ -275,6 +299,259 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigation, user, onLog
 
   const renderTabContent = () => {
     switch (activeTab) {
+      case 'Home':
+        // Calculate comprehensive dashboard statistics
+        const totalUsers = users.length;
+        const totalRestaurants = restaurants.length;
+        const approvedRestaurants = restaurants.filter(r => r.approved).length;
+        const pendingRestaurants = restaurants.filter(r => !r.approved).length;
+        const openRestaurants = restaurants.filter(r => r.status === 'open').length;
+        const totalOrders = orders.length;
+        const pendingOrders = orders.filter(o => o.status === 'pending').length;
+        const preparingOrders = orders.filter(o => o.status === 'preparing').length;
+        const readyOrders = orders.filter(o => o.status === 'ready').length;
+        const deliveringOrders = orders.filter(o => o.status === 'delivering').length;
+        const deliveredOrders = orders.filter(o => o.status === 'delivered').length;
+        const cancelledOrders = orders.filter(o => o.status === 'cancelled').length;
+        const totalRevenue = orders.reduce((sum, order) => sum + parseFloat(order.total_price.toString()), 0);
+
+        // Calculate additional metrics
+        const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+        const ordersToday = orders.filter(o => {
+          const orderDate = new Date(o.order_time);
+          const today = new Date();
+          return orderDate.toDateString() === today.toDateString();
+        }).length;
+        const revenueToday = orders.filter(o => {
+          const orderDate = new Date(o.order_time);
+          const today = new Date();
+          return orderDate.toDateString() === today.toDateString();
+        }).reduce((sum, order) => sum + parseFloat(order.total_price.toString()), 0);
+
+        // Recent activity (last 5 orders)
+        const recentOrders = orders.slice(0, 5);
+
+        // System health indicators
+        const activeDeliveries = orders.filter(o => o.status === 'delivering' || o.status === 'ready').length;
+        const systemHealth = totalOrders > 0 ? ((deliveredOrders / totalOrders) * 100) : 100;
+
+        return (
+          <ScrollView style={styles.homeContainer} showsVerticalScrollIndicator={false}>
+            {/* Welcome Header */}
+            <View style={styles.welcomeSection}>
+              <Text style={[styles.welcomeTitle, { color: colors.text }]}>
+                🏢 System Overview
+              </Text>
+              <Text style={[styles.welcomeSubtitle, { color: colors.textSecondary }]}>
+                Comprehensive analytics and platform insights at a glance
+              </Text>
+            </View>
+
+            {/* Key Performance Indicators */}
+            <View style={styles.statsSection}>
+              <Text style={[styles.adminSectionTitle, { color: colors.text }]}>📊 Key Performance Indicators</Text>
+              <View style={styles.statsGrid}>
+                <View style={[styles.adminStatCard, { backgroundColor: colors.surface }]}>
+                  <Ionicons name="people" size={32} color={colors.primary} />
+                  <Text style={[styles.statValue, { color: colors.text }]}>{totalUsers}</Text>
+                  <Text style={[styles.adminStatLabel, { color: colors.textSecondary }]}>Registered Users</Text>
+                </View>
+                <View style={[styles.adminStatCard, { backgroundColor: colors.surface }]}>
+                  <Ionicons name="restaurant" size={32} color={colors.success} />
+                  <Text style={[styles.statValue, { color: colors.text }]}>{totalRestaurants}</Text>
+                  <Text style={[styles.adminStatLabel, { color: colors.textSecondary }]}>Total Restaurants</Text>
+                </View>
+                <View style={[styles.adminStatCard, { backgroundColor: colors.surface }]}>
+                  <Ionicons name="clipboard" size={32} color={colors.warning} />
+                  <Text style={[styles.statValue, { color: colors.text }]}>{totalOrders}</Text>
+                  <Text style={[styles.adminStatLabel, { color: colors.textSecondary }]}>Total Orders</Text>
+                </View>
+                <View style={[styles.adminStatCard, { backgroundColor: colors.surface }]}>
+                  <Ionicons name="cash" size={32} color={colors.info} />
+                  <Text style={[styles.statValue, { color: colors.text }]}>${totalRevenue.toFixed(2)}</Text>
+                  <Text style={[styles.adminStatLabel, { color: colors.textSecondary }]}>Total Revenue</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Today's Performance */}
+            <View style={styles.todaySection}>
+              <Text style={[styles.adminSectionTitle, { color: colors.text }]}>📈 Today's Performance</Text>
+              <View style={styles.todayGrid}>
+                <View style={[styles.todayCard, { backgroundColor: colors.primary + '15' }]}>
+                  <Ionicons name="today" size={24} color={colors.primary} />
+                  <Text style={[styles.todayValue, { color: colors.primary }]}>{ordersToday}</Text>
+                  <Text style={[styles.todayLabel, { color: colors.textSecondary }]}>Orders Today</Text>
+                </View>
+                <View style={[styles.todayCard, { backgroundColor: colors.success + '15' }]}>
+                  <Ionicons name="wallet" size={24} color={colors.success} />
+                  <Text style={[styles.todayValue, { color: colors.success }]}>${revenueToday.toFixed(2)}</Text>
+                  <Text style={[styles.todayLabel, { color: colors.textSecondary }]}>Revenue Today</Text>
+                </View>
+                <View style={[styles.todayCard, { backgroundColor: colors.warning + '15' }]}>
+                  <Ionicons name="trending-up" size={24} color={colors.warning} />
+                  <Text style={[styles.todayValue, { color: colors.warning }]}>${avgOrderValue.toFixed(2)}</Text>
+                  <Text style={[styles.todayLabel, { color: colors.textSecondary }]}>Avg Order Value</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Restaurant Ecosystem */}
+            <View style={styles.restaurantStatusSection}>
+              <Text style={[styles.adminSectionTitle, { color: colors.text }]}>🏪 Restaurant Ecosystem</Text>
+              <View style={styles.statusGrid}>
+                <View style={[styles.statusCard, { backgroundColor: colors.success + '20' }]}>
+                  <Text style={[styles.statusValue, { color: colors.success }]}>{approvedRestaurants}</Text>
+                  <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Approved</Text>
+                </View>
+                <View style={[styles.statusCard, { backgroundColor: colors.warning + '20' }]}>
+                  <Text style={[styles.statusValue, { color: colors.warning }]}>{pendingRestaurants}</Text>
+                  <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Pending Approval</Text>
+                </View>
+                <View style={[styles.statusCard, { backgroundColor: colors.info + '20' }]}>
+                  <Text style={[styles.statusValue, { color: colors.info }]}>{openRestaurants}</Text>
+                  <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Currently Open</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Order Lifecycle */}
+            <View style={styles.orderStatusSection}>
+              <Text style={[styles.adminSectionTitle, { color: colors.text }]}>🚚 Order Lifecycle</Text>
+              <View style={styles.lifecycleGrid}>
+                <View style={[styles.lifecycleCard, { backgroundColor: colors.warning + '20' }]}>
+                  <Text style={[styles.lifecycleValue, { color: colors.warning }]}>{pendingOrders}</Text>
+                  <Text style={[styles.lifecycleLabel, { color: colors.textSecondary }]}>Pending</Text>
+                </View>
+                <View style={[styles.lifecycleCard, { backgroundColor: colors.primary + '20' }]}>
+                  <Text style={[styles.lifecycleValue, { color: colors.primary }]}>{preparingOrders}</Text>
+                  <Text style={[styles.lifecycleLabel, { color: colors.textSecondary }]}>Preparing</Text>
+                </View>
+                <View style={[styles.lifecycleCard, { backgroundColor: colors.info + '20' }]}>
+                  <Text style={[styles.lifecycleValue, { color: colors.info }]}>{readyOrders}</Text>
+                  <Text style={[styles.lifecycleLabel, { color: colors.textSecondary }]}>Ready</Text>
+                </View>
+                <View style={[styles.lifecycleCard, { backgroundColor: colors.info + '20' }]}>
+                  <Text style={[styles.lifecycleValue, { color: colors.info }]}>{deliveringOrders}</Text>
+                  <Text style={[styles.lifecycleLabel, { color: colors.textSecondary }]}>Delivering</Text>
+                </View>
+                <View style={[styles.lifecycleCard, { backgroundColor: colors.success + '20' }]}>
+                  <Text style={[styles.lifecycleValue, { color: colors.success }]}>{deliveredOrders}</Text>
+                  <Text style={[styles.lifecycleLabel, { color: colors.textSecondary }]}>Delivered</Text>
+                </View>
+                <View style={[styles.lifecycleCard, { backgroundColor: colors.error + '20' }]}>
+                  <Text style={[styles.lifecycleValue, { color: colors.error }]}>{cancelledOrders}</Text>
+                  <Text style={[styles.lifecycleLabel, { color: colors.textSecondary }]}>Cancelled</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* System Health */}
+            <View style={styles.healthSection}>
+              <Text style={[styles.adminSectionTitle, { color: colors.text }]}>⚡ System Health</Text>
+              <View style={styles.healthGrid}>
+                <View style={[styles.healthCard, { backgroundColor: colors.primary + '15' }]}>
+                  <Ionicons name="bicycle" size={24} color={colors.primary} />
+                  <Text style={[styles.healthValue, { color: colors.primary }]}>{activeDeliveries}</Text>
+                  <Text style={[styles.healthLabel, { color: colors.textSecondary }]}>Active Deliveries</Text>
+                </View>
+                <View style={[styles.healthCard, { backgroundColor: colors.success + '15' }]}>
+                  <Ionicons name="shield-checkmark" size={24} color={colors.success} />
+                  <Text style={[styles.healthValue, { color: colors.success }]}>{systemHealth.toFixed(1)}%</Text>
+                  <Text style={[styles.healthLabel, { color: colors.textSecondary }]}>Success Rate</Text>
+                </View>
+                <View style={[styles.healthCard, { backgroundColor: colors.warning + '15' }]}>
+                  <Ionicons name="time" size={24} color={colors.warning} />
+                  <Text style={[styles.healthValue, { color: colors.warning }]}>{orders.filter(o => o.status !== 'delivered').length}</Text>
+                  <Text style={[styles.healthLabel, { color: colors.textSecondary }]}>Orders in Progress</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Quick Actions */}
+            <View style={styles.quickActionsSection}>
+              <Text style={[styles.adminSectionTitle, { color: colors.text }]}>⚡ Quick Actions</Text>
+              <View style={styles.quickActionsGrid}>
+                <TouchableOpacity
+                  style={[styles.quickActionButton, { backgroundColor: colors.primary }]}
+                  onPress={() => setActiveTab('Users')}
+                >
+                  <Ionicons name="people" size={24} color={colors.background} />
+                  <Text style={[styles.quickActionText, { color: colors.background }]}>Manage Users</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.quickActionButton, { backgroundColor: colors.success }]}
+                  onPress={() => setActiveTab('Restaurants')}
+                >
+                  <Ionicons name="restaurant" size={24} color={colors.background} />
+                  <Text style={[styles.quickActionText, { color: colors.background }]}>Review Restaurants</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.quickActionButton, { backgroundColor: colors.warning }]}
+                  onPress={() => setActiveTab('Orders')}
+                >
+                  <Ionicons name="clipboard" size={24} color={colors.background} />
+                  <Text style={[styles.quickActionText, { color: colors.background }]}>Process Orders</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.quickActionButton, { backgroundColor: colors.info }]}
+                  onPress={() => setActiveTab('Settings')}
+                >
+                  <Ionicons name="settings" size={24} color={colors.background} />
+                  <Text style={[styles.quickActionText, { color: colors.background }]}>System Settings</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Recent Activity */}
+            {recentOrders.length > 0 && (
+              <View style={styles.recentActivitySection}>
+                <Text style={[styles.adminSectionTitle, { color: colors.text }]}>📋 Recent Activity</Text>
+                {recentOrders.map((order) => (
+                  <TouchableOpacity
+                    key={order.id}
+                    style={[styles.recentOrderCard, { backgroundColor: colors.surface }]}
+                    onPress={() => setActiveTab('Orders')}
+                  >
+                    <View style={styles.recentOrderLeft}>
+                      <Text style={[styles.recentOrderTitle, { color: colors.text }]}>
+                        Order #{order.id}
+                      </Text>
+                      <Text style={[styles.recentOrderSubtitle, { color: colors.textSecondary }]}>
+                        {order.customer?.name} • {order.restaurant.name}
+                      </Text>
+                      <Text style={[styles.recentOrderTime, { color: colors.textSecondary }]}>
+                        {new Date(order.order_time).toLocaleString()}
+                      </Text>
+                    </View>
+                    <View style={styles.recentOrderRight}>
+                      <View style={[styles.miniStatusBadge, {
+                        backgroundColor: order.status === 'delivered' ? colors.success + '20' :
+                                        order.status === 'preparing' ? colors.warning + '20' :
+                                        order.status === 'pending' ? colors.primary + '20' :
+                                        order.status === 'ready' ? colors.info + '20' :
+                                        order.status === 'delivering' ? colors.info + '20' : colors.error + '20'
+                      }]}>
+                        <Text style={[styles.miniStatusText, {
+                          color: order.status === 'delivered' ? colors.success :
+                                 order.status === 'preparing' ? colors.warning :
+                                 order.status === 'pending' ? colors.primary :
+                                 order.status === 'ready' ? colors.info :
+                                 order.status === 'delivering' ? colors.info : colors.error
+                        }]}>
+                          {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                        </Text>
+                      </View>
+                      <Text style={[styles.recentOrderAmount, { color: colors.primary }]}>
+                        ${parseFloat(order.total_price.toString()).toFixed(2)}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </ScrollView>
+        );
       case 'Users':
         return loading ? (
           <Text style={[styles.loadingText, { color: colors.text }]}>Loading users...</Text>
@@ -395,33 +672,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigation, user, onLog
       <Text style={[styles.welcome, { color: colors.text }]}>Welcome, {user?.name || 'User'}!</Text>
       <Text style={[styles.role, { color: colors.textSecondary }]}>Role: {user?.role || 'Unknown'}</Text>
 
-      <View style={styles.tabContainer}>
-        {tabs.map((tab) => (
-          <TouchableOpacity
-            key={tab.name}
-            style={[styles.tab, activeTab === tab.name && styles.activeTab]}
-            onPress={() => {
-              if (tab.screen) {
-                navigation.navigate(tab.screen);
-              } else {
-                setActiveTab(tab.name);
-              }
-            }}
-          >
-            <Ionicons name={tab.icon as any} size={24} color={activeTab === tab.name ? colors.background : colors.textSecondary} />
-            <Text style={[styles.tabText, activeTab === tab.name && styles.activeTabText]}>{tab.name}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
       <View style={styles.content}>
         {renderTabContent()}
       </View>
-
-      <TouchableOpacity style={[styles.logoutButton, { backgroundColor: colors.error }]} onPress={onLogout}>
-        <Ionicons name="log-out" size={20} color={colors.text} />
-        <Text style={styles.logoutText}>Logout</Text>
-      </TouchableOpacity>
     </View>
   );
 };
@@ -472,31 +725,24 @@ const styles = StyleSheet.create({
     color: Theme.colors.text,
     fontSize: Theme.typography.fontSize.md,
   },
-  tabContainer: {
+  tabBar: {
     flexDirection: 'row',
     marginBottom: Theme.spacing.lg,
-    justifyContent: 'space-around',
+    borderBottomWidth: 1,
+    borderBottomColor: Theme.colors.border,
   },
   tab: {
+    flex: 1,
+    paddingVertical: Theme.spacing.sm,
     alignItems: 'center',
-    padding: Theme.spacing.md,
-    borderRadius: Theme.borderRadius.md,
-    backgroundColor: Theme.colors.surface,
-    borderWidth: 1,
-    borderColor: Theme.colors.border,
   },
   activeTab: {
-    backgroundColor: Theme.colors.primary,
-    borderColor: Theme.colors.primary,
+    borderBottomWidth: 2,
+    borderBottomColor: Theme.colors.primary,
   },
   tabText: {
     fontSize: Theme.typography.fontSize.sm,
-    color: Theme.colors.textSecondary,
-    marginTop: Theme.spacing.xs,
-  },
-  activeTabText: {
-    color: Theme.colors.background,
-    fontWeight: Theme.typography.fontWeight.bold,
+    fontWeight: Theme.typography.fontWeight.medium,
   },
   content: {
     flex: 1,
@@ -707,6 +953,254 @@ const styles = StyleSheet.create({
     borderRadius: Theme.borderRadius.sm,
     alignItems: 'center',
     minWidth: 100,
+  },
+  // Admin Home Dashboard Styles
+  homeContainer: {
+    flex: 1,
+    padding: Theme.spacing.lg,
+  },
+  welcomeSection: {
+    marginBottom: Theme.spacing.xl,
+    padding: Theme.spacing.lg,
+    backgroundColor: Theme.colors.primary + '10',
+    borderRadius: Theme.borderRadius.lg,
+    borderWidth: 1,
+    borderColor: Theme.colors.primary + '20',
+  },
+  welcomeTitle: {
+    fontSize: Theme.typography.fontSize.xl,
+    fontWeight: Theme.typography.fontWeight.bold,
+    marginBottom: Theme.spacing.xs,
+  },
+  welcomeSubtitle: {
+    fontSize: Theme.typography.fontSize.md,
+  },
+  statsSection: {
+    marginBottom: Theme.spacing.xl,
+  },
+  adminSectionTitle: {
+    fontSize: Theme.typography.fontSize.lg,
+    fontWeight: Theme.typography.fontWeight.bold,
+    marginBottom: Theme.spacing.lg,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  adminStatCard: {
+    width: '48%',
+    alignItems: 'center',
+    padding: Theme.spacing.lg,
+    marginBottom: Theme.spacing.md,
+    borderRadius: Theme.borderRadius.lg,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  statValue: {
+    fontSize: Theme.typography.fontSize.xl,
+    fontWeight: Theme.typography.fontWeight.bold,
+    marginTop: Theme.spacing.sm,
+    marginBottom: Theme.spacing.xs,
+  },
+  adminStatLabel: {
+    fontSize: Theme.typography.fontSize.sm,
+    textAlign: 'center',
+  },
+  restaurantStatusSection: {
+    marginBottom: Theme.spacing.xl,
+  },
+  orderStatusSection: {
+    marginBottom: Theme.spacing.xl,
+  },
+  statusGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  statusCard: {
+    flex: 1,
+    alignItems: 'center',
+    padding: Theme.spacing.lg,
+    marginHorizontal: Theme.spacing.xs,
+    borderRadius: Theme.borderRadius.lg,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  statusValue: {
+    fontSize: Theme.typography.fontSize.xl,
+    fontWeight: Theme.typography.fontWeight.bold,
+    marginBottom: Theme.spacing.xs,
+  },
+  statusLabel: {
+    fontSize: Theme.typography.fontSize.sm,
+    textAlign: 'center',
+  },
+  quickActionsSection: {
+    marginBottom: Theme.spacing.xl,
+  },
+  quickActionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  quickActionButton: {
+    width: '48%',
+    padding: Theme.spacing.lg,
+    borderRadius: Theme.borderRadius.lg,
+    alignItems: 'center',
+    marginBottom: Theme.spacing.md,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+  },
+  quickActionText: {
+    fontSize: Theme.typography.fontSize.sm,
+    fontWeight: Theme.typography.fontWeight.medium,
+    textAlign: 'center',
+    marginTop: Theme.spacing.sm,
+  },
+  recentActivitySection: {
+    marginBottom: Theme.spacing.xl,
+  },
+  recentOrderCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: Theme.spacing.lg,
+    marginBottom: Theme.spacing.md,
+    borderRadius: Theme.borderRadius.lg,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  recentOrderLeft: {
+    flex: 1,
+  },
+  recentOrderTitle: {
+    fontSize: Theme.typography.fontSize.md,
+    fontWeight: Theme.typography.fontWeight.medium,
+    marginBottom: Theme.spacing.xs,
+  },
+  recentOrderSubtitle: {
+    fontSize: Theme.typography.fontSize.sm,
+  },
+  recentOrderRight: {
+    alignItems: 'flex-end',
+  },
+  miniStatusBadge: {
+    paddingHorizontal: Theme.spacing.sm,
+    paddingVertical: Theme.spacing.xs,
+    borderRadius: Theme.borderRadius.sm,
+    marginBottom: Theme.spacing.xs,
+  },
+  miniStatusText: {
+    fontSize: Theme.typography.fontSize.xs,
+    fontWeight: Theme.typography.fontWeight.bold,
+  },
+  recentOrderAmount: {
+    fontSize: Theme.typography.fontSize.md,
+    fontWeight: Theme.typography.fontWeight.bold,
+  },
+  // Today's Performance Section
+  todaySection: {
+    marginBottom: Theme.spacing.xl,
+  },
+  todayGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  todayCard: {
+    flex: 1,
+    alignItems: 'center',
+    padding: Theme.spacing.lg,
+    marginHorizontal: Theme.spacing.xs,
+    borderRadius: Theme.borderRadius.lg,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  todayValue: {
+    fontSize: Theme.typography.fontSize.xl,
+    fontWeight: Theme.typography.fontWeight.bold,
+    marginTop: Theme.spacing.sm,
+    marginBottom: Theme.spacing.xs,
+  },
+  todayLabel: {
+    fontSize: Theme.typography.fontSize.sm,
+    textAlign: 'center',
+  },
+  // Order Lifecycle Section
+  lifecycleGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  lifecycleCard: {
+    width: '31%',
+    alignItems: 'center',
+    padding: Theme.spacing.md,
+    marginBottom: Theme.spacing.md,
+    borderRadius: Theme.borderRadius.lg,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  lifecycleValue: {
+    fontSize: Theme.typography.fontSize.xl,
+    fontWeight: Theme.typography.fontWeight.bold,
+    marginBottom: Theme.spacing.xs,
+  },
+  lifecycleLabel: {
+    fontSize: Theme.typography.fontSize.sm,
+    textAlign: 'center',
+  },
+  // System Health Section
+  healthSection: {
+    marginBottom: Theme.spacing.xl,
+  },
+  healthGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  healthCard: {
+    flex: 1,
+    alignItems: 'center',
+    padding: Theme.spacing.lg,
+    marginHorizontal: Theme.spacing.xs,
+    borderRadius: Theme.borderRadius.lg,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  healthValue: {
+    fontSize: Theme.typography.fontSize.xl,
+    fontWeight: Theme.typography.fontWeight.bold,
+    marginTop: Theme.spacing.sm,
+    marginBottom: Theme.spacing.xs,
+  },
+  healthLabel: {
+    fontSize: Theme.typography.fontSize.sm,
+    textAlign: 'center',
+  },
+  recentOrderTime: {
+    fontSize: Theme.typography.fontSize.sm,
+    marginTop: Theme.spacing.xs,
   },
 });
 

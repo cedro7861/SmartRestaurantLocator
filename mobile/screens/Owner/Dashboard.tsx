@@ -4,6 +4,7 @@ import { Theme } from '../../lib/colors';
 import { getOwnerMenuItems, MenuItem, updateMenuItem, deleteMenuItem } from '../../lib/api/menuApi';
 import { updateProfile, changePassword } from '../../lib/api/userApi';
 import { getOwnerOrders, Order } from '../../lib/api/orderApi';
+import { getOwnerRestaurants, Restaurant } from '../../lib/api/restaurantApi';
 
 interface OwnerDashboardProps {
   navigation: any;
@@ -12,7 +13,7 @@ interface OwnerDashboardProps {
 }
 
 const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ navigation, user, onLogout }) => {
-  const [activeTab, setActiveTab] = useState('restaurants');
+  const [activeTab, setActiveTab] = useState('home');
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loadingMenu, setLoadingMenu] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
@@ -21,6 +22,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ navigation, user, onLog
   const [editDescription, setEditDescription] = useState('');
   const [editCategory, setEditCategory] = useState('');
   const [orders, setOrders] = useState<Order[]>([]);
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [profileName, setProfileName] = useState(user?.name || '');
   const [profileEmail, setProfileEmail] = useState(user?.email || '');
   const [profilePhone, setProfilePhone] = useState(user?.phone || '');
@@ -33,7 +35,9 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ navigation, user, onLog
   const { colors, spacing, borderRadius, typography } = Theme;
 
   useEffect(() => {
-    if (activeTab === 'menu') {
+    if (activeTab === 'home') {
+      loadDashboardData();
+    } else if (activeTab === 'menu') {
       loadMenuItems();
     } else if (activeTab === 'settings') {
       loadOrdersForAnalytics();
@@ -65,9 +69,25 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ navigation, user, onLog
   const loadOrdersForAnalytics = async () => {
     try {
       const data = await getOwnerOrders();
-      setOrders(data);
+      setOrders(data || []);
     } catch (error) {
       console.log('Failed to load orders for analytics');
+      setOrders([]);
+    }
+  };
+
+  const loadDashboardData = async () => {
+    try {
+      const [ordersData, restaurantsData] = await Promise.all([
+        getOwnerOrders(),
+        getOwnerRestaurants(user?.id)
+      ]);
+      setOrders(ordersData || []);
+      setRestaurants(restaurantsData || []);
+    } catch (error) {
+      console.log('Failed to load dashboard data');
+      setOrders([]);
+      setRestaurants([]);
     }
   };
 
@@ -171,7 +191,11 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ navigation, user, onLog
 
   const calculateAnalytics = () => {
     const totalOrders = orders.length;
-    const totalRevenue = orders.reduce((sum, order) => sum + order.total_price, 0);
+    // Safely calculate total revenue with fallback for undefined total_price
+    const totalRevenue = orders.reduce((sum, order) => {
+      const price = order.total_price || 0;
+      return sum + (typeof price === 'number' ? price : parseFloat(price) || 0);
+    }, 0);
     const completedOrders = orders.filter(order => order.status === 'delivered').length;
     const pendingOrders = orders.filter(order => order.status === 'pending').length;
 
@@ -180,6 +204,107 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ navigation, user, onLog
 
   const renderTabContent = () => {
     switch (activeTab) {
+      case 'home':
+        // Calculate overview statistics from database
+        const totalRestaurants = restaurants.length;
+        const totalMenuItems = menuItems.length;
+        const analytics = calculateAnalytics();
+
+        return (
+          <ScrollView style={styles.homeContainer} showsVerticalScrollIndicator={false}>
+            {/* Welcome Header */}
+            <View style={styles.welcomeSection}>
+              <Text style={[styles.welcomeTitle, { color: colors.text }]}>
+                Welcome, {user?.name}
+              </Text>
+              <Text style={[styles.welcomeSubtitle, { color: colors.textSecondary }]}>
+                Restaurant Management Dashboard
+              </Text>
+            </View>
+
+            {/* Quick Stats Grid */}
+            <View style={styles.statsOverviewSection}>
+              <Text style={[styles.sectionTitleHome, { color: colors.text }]}>📊 Business Overview</Text>
+              <View style={styles.statsGrid}>
+                <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
+                  <Text style={[styles.statIcon, { color: colors.primary }]}>🏪</Text>
+                  <Text style={[styles.statValue, { color: colors.text }]}>{totalRestaurants}</Text>
+                  <Text style={[styles.statLabel, { color: colors.textSecondary }]}>My Restaurants</Text>
+                </View>
+                <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
+                  <Text style={[styles.statIcon, { color: colors.success }]}>🍽️</Text>
+                  <Text style={[styles.statValue, { color: colors.text }]}>{totalMenuItems}</Text>
+                  <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Menu Items</Text>
+                </View>
+                <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
+                  <Text style={[styles.statIcon, { color: colors.warning }]}>📋</Text>
+                  <Text style={[styles.statValue, { color: colors.text }]}>{analytics.totalOrders}</Text>
+                  <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total Orders</Text>
+                </View>
+                <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
+                  <Text style={[styles.statIcon, { color: colors.info }]}>💰</Text>
+                  <Text style={[styles.statValue, { color: colors.text }]}>${analytics.totalRevenue.toFixed(2)}</Text>
+                  <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Revenue</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Order Status Overview */}
+            {analytics.totalOrders > 0 && (
+              <View style={styles.orderStatusSection}>
+                <Text style={[styles.sectionTitleHome, { color: colors.text }]}>📈 Order Status</Text>
+                <View style={styles.orderStatusGrid}>
+                  <View style={[styles.orderStatusCard, { backgroundColor: colors.success + '15' }]}>
+                    <Text style={[styles.orderStatusIcon, { color: colors.success }]}>✅</Text>
+                    <Text style={[styles.orderStatusValue, { color: colors.success }]}>{analytics.completedOrders}</Text>
+                    <Text style={[styles.orderStatusLabel, { color: colors.textSecondary }]}>Completed</Text>
+                  </View>
+                  <View style={[styles.orderStatusCard, { backgroundColor: colors.warning + '15' }]}>
+                    <Text style={[styles.orderStatusIcon, { color: colors.warning }]}>⏳</Text>
+                    <Text style={[styles.orderStatusValue, { color: colors.warning }]}>{analytics.pendingOrders}</Text>
+                    <Text style={[styles.orderStatusLabel, { color: colors.textSecondary }]}>Pending</Text>
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {/* Quick Actions */}
+            <View style={styles.quickActionsSection}>
+              <Text style={[styles.sectionTitleHome, { color: colors.text }]}>⚡ Quick Actions</Text>
+              <View style={styles.quickActionsGrid}>
+                <TouchableOpacity
+                  style={[styles.quickActionButton, { backgroundColor: colors.primary }]}
+                  onPress={() => navigation.navigate('AddRestaurant')}
+                >
+                  <Text style={[styles.quickActionIcon, { color: colors.background }]}>🏪</Text>
+                  <Text style={[styles.quickActionText, { color: colors.background }]}>Add Restaurant</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.quickActionButton, { backgroundColor: colors.success }]}
+                  onPress={() => navigation.navigate('AddMenuItem')}
+                >
+                  <Text style={[styles.quickActionIcon, { color: colors.background }]}>🍽️</Text>
+                  <Text style={[styles.quickActionText, { color: colors.background }]}>Add Menu Item</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.quickActionButton, { backgroundColor: colors.info }]}
+                  onPress={() => navigation.navigate('ManageOrders')}
+                >
+                  <Text style={[styles.quickActionIcon, { color: colors.background }]}>📋</Text>
+                  <Text style={[styles.quickActionText, { color: colors.background }]}>View Orders</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.quickActionButton, { backgroundColor: colors.warning }]}
+                  onPress={() => navigation.navigate('ViewRestaurants')}
+                >
+                  <Text style={[styles.quickActionIcon, { color: colors.background }]}>📊</Text>
+                  <Text style={[styles.quickActionText, { color: colors.background }]}>Manage Restaurants</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+          </ScrollView>
+        );
       case 'restaurants':
         return (
           <View style={styles.tabContent}>
@@ -299,10 +424,10 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ navigation, user, onLog
                       <>
                         <View style={styles.menuItemHeader}>
                           <Text style={[styles.menuItemName, { color: colors.text }]}>{item.name}</Text>
-                          <Text style={[styles.menuItemPrice, { color: colors.primary }]}>${item.price}</Text>
+                          <Text style={[styles.menuItemPrice, { color: colors.primary }]}>${item.price.toFixed(2)}</Text>
                         </View>
                         <Text style={[styles.menuItemRestaurant, { color: colors.textSecondary }]}>
-                          {item.restaurant?.name}
+                          {item.restaurant?.name || 'No restaurant'}
                         </Text>
                         {item.category && (
                           <Text style={[styles.menuItemCategory, { color: colors.textSecondary }]}>
@@ -338,7 +463,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ navigation, user, onLog
           </View>
         );
       case 'settings':
-        const analytics = calculateAnalytics();
+        const settingsAnalytics = calculateAnalytics();
         return (
           <ScrollView style={styles.tabContent}>
             {/* Profile Settings */}
@@ -417,28 +542,28 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ navigation, user, onLog
               <View style={styles.toggleContainer}>
                 <Text style={[styles.toggleLabel, { color: colors.text }]}>Enable Notifications</Text>
                 <TouchableOpacity
-                  style={[styles.toggle, notificationsEnabled && styles.toggleActive]}
+                  style={[styles.toggle, notificationsEnabled && { backgroundColor: colors.primary }]}
                   onPress={() => setNotificationsEnabled(!notificationsEnabled)}
                 >
-                  <View style={[styles.toggleKnob, notificationsEnabled && styles.toggleKnobActive]} />
+                  <View style={[styles.toggleKnob, notificationsEnabled && { transform: [{ translateX: 26 }] }]} />
                 </TouchableOpacity>
               </View>
               <View style={styles.toggleContainer}>
                 <Text style={[styles.toggleLabel, { color: colors.text }]}>Email Notifications</Text>
                 <TouchableOpacity
-                  style={[styles.toggle, emailNotifications && styles.toggleActive]}
+                  style={[styles.toggle, emailNotifications && { backgroundColor: colors.primary }]}
                   onPress={() => setEmailNotifications(!emailNotifications)}
                 >
-                  <View style={[styles.toggleKnob, emailNotifications && styles.toggleKnobActive]} />
+                  <View style={[styles.toggleKnob, emailNotifications && { transform: [{ translateX: 26 }] }]} />
                 </TouchableOpacity>
               </View>
               <View style={styles.toggleContainer}>
                 <Text style={[styles.toggleLabel, { color: colors.text }]}>Push Notifications</Text>
                 <TouchableOpacity
-                  style={[styles.toggle, pushNotifications && styles.toggleActive]}
+                  style={[styles.toggle, pushNotifications && { backgroundColor: colors.primary }]}
                   onPress={() => setPushNotifications(!pushNotifications)}
                 >
-                  <View style={[styles.toggleKnob, pushNotifications && styles.toggleKnobActive]} />
+                  <View style={[styles.toggleKnob, pushNotifications && { transform: [{ translateX: 26 }] }]} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -448,19 +573,19 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ navigation, user, onLog
               <Text style={[styles.sectionTitle, { color: colors.text }]}>Business Analytics</Text>
               <View style={styles.analyticsGrid}>
                 <View style={[styles.analyticsCard, { backgroundColor: colors.surface }]}>
-                  <Text style={[styles.analyticsNumber, { color: colors.primary }]}>{analytics.totalOrders}</Text>
+                  <Text style={[styles.analyticsNumber, { color: colors.primary }]}>{settingsAnalytics.totalOrders}</Text>
                   <Text style={[styles.analyticsLabel, { color: colors.textSecondary }]}>Total Orders</Text>
                 </View>
                 <View style={[styles.analyticsCard, { backgroundColor: colors.surface }]}>
-                  <Text style={[styles.analyticsNumber, { color: colors.success }]}>${analytics.totalRevenue.toFixed(2)}</Text>
+                  <Text style={[styles.analyticsNumber, { color: colors.success }]}>${settingsAnalytics.totalRevenue.toFixed(2)}</Text>
                   <Text style={[styles.analyticsLabel, { color: colors.textSecondary }]}>Total Revenue</Text>
                 </View>
                 <View style={[styles.analyticsCard, { backgroundColor: colors.surface }]}>
-                  <Text style={[styles.analyticsNumber, { color: colors.success }]}>{analytics.completedOrders}</Text>
+                  <Text style={[styles.analyticsNumber, { color: colors.success }]}>{settingsAnalytics.completedOrders}</Text>
                   <Text style={[styles.analyticsLabel, { color: colors.textSecondary }]}>Completed</Text>
                 </View>
                 <View style={[styles.analyticsCard, { backgroundColor: colors.surface }]}>
-                  <Text style={[styles.analyticsNumber, { color: colors.warning }]}>{analytics.pendingOrders}</Text>
+                  <Text style={[styles.analyticsNumber, { color: colors.warning }]}>{settingsAnalytics.pendingOrders}</Text>
                   <Text style={[styles.analyticsLabel, { color: colors.textSecondary }]}>Pending</Text>
                 </View>
               </View>
@@ -474,53 +599,13 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ navigation, user, onLog
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Text style={[styles.title, { color: colors.text }]}>Owner Dashboard</Text>
-      <Text style={[styles.welcome, { color: colors.text }]}>Welcome, {user?.name || 'User'}!</Text>
-
-      {/* Tab Bar */}
-      <View style={styles.tabBar}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'restaurants' && styles.activeTab]}
-          onPress={() => setActiveTab('restaurants')}
-        >
-          <Text style={[styles.tabText, { color: activeTab === 'restaurants' ? colors.primary : colors.textSecondary }]}>
-            Restaurants
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'orders' && styles.activeTab]}
-          onPress={() => setActiveTab('orders')}
-        >
-          <Text style={[styles.tabText, { color: activeTab === 'orders' ? colors.primary : colors.textSecondary }]}>
-            Orders
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'menu' && styles.activeTab]}
-          onPress={() => setActiveTab('menu')}
-        >
-          <Text style={[styles.tabText, { color: activeTab === 'menu' ? colors.primary : colors.textSecondary }]}>
-            Menu
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'settings' && styles.activeTab]}
-          onPress={() => setActiveTab('settings')}
-        >
-          <Text style={[styles.tabText, { color: activeTab === 'settings' ? colors.primary : colors.textSecondary }]}>
-            Settings
-          </Text>
-        </TouchableOpacity>
+      <Text style={[styles.title, { color: colors.text }]}>Restraunt Owner Dashboard</Text>
+      {/* Tab Content */}
+      <View style={styles.contentContainer}>
+        {renderTabContent()}
       </View>
 
-      {/* Tab Content */}
-      <ScrollView style={styles.contentContainer}>
-        {renderTabContent()}
-      </ScrollView>
-
-      <TouchableOpacity style={[styles.logoutButton, { backgroundColor: colors.error }]} onPress={onLogout}>
-        <Text style={[styles.logoutText, { color: colors.background }]}>Logout</Text>
-      </TouchableOpacity>
+     
     </View>
   );
 };
@@ -564,6 +649,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   tabContent: {
+    flex: 1,
     padding: Theme.spacing.lg,
   },
   tabTitle: {
@@ -690,7 +776,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Theme.colors.border,
   },
-  sectionTitle: {
+  sectionTitleHome: {
     fontSize: Theme.typography.fontSize.lg,
     fontWeight: Theme.typography.fontWeight.bold,
     marginBottom: Theme.spacing.md,
@@ -719,16 +805,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 2,
   },
-  toggleActive: {
-    backgroundColor: Theme.colors.primary,
-  },
   toggleKnob: {
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: Theme.colors.background,
-  },
-  toggleKnobActive: {
     backgroundColor: Theme.colors.background,
   },
   analyticsGrid: {
@@ -752,6 +832,162 @@ const styles = StyleSheet.create({
   analyticsLabel: {
     fontSize: Theme.typography.fontSize.sm,
     marginTop: Theme.spacing.xs,
+  },
+  // Home Screen Styles
+  homeContainer: {
+    flex: 1,
+  },
+  welcomeSection: {
+    marginBottom: Theme.spacing.xl,
+    padding: Theme.spacing.lg,
+    backgroundColor: Theme.colors.primary + '10',
+    borderRadius: Theme.borderRadius.lg,
+    borderWidth: 1,
+    borderColor: Theme.colors.primary + '20',
+  },
+  welcomeTitle: {
+    fontSize: Theme.typography.fontSize.xl,
+    fontWeight: Theme.typography.fontWeight.bold,
+    marginBottom: Theme.spacing.xs,
+  },
+  welcomeSubtitle: {
+    fontSize: Theme.typography.fontSize.md,
+  },
+  statsOverviewSection: {
+    marginBottom: Theme.spacing.xl,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  statCard: {
+    width: '48%',
+    alignItems: 'center',
+    padding: Theme.spacing.lg,
+    marginBottom: Theme.spacing.md,
+    borderRadius: Theme.borderRadius.lg,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  statIcon: {
+    fontSize: Theme.typography.fontSize.xl,
+    marginBottom: Theme.spacing.sm,
+  },
+  statValue: {
+    fontSize: Theme.typography.fontSize.xl,
+    fontWeight: Theme.typography.fontWeight.bold,
+    marginBottom: Theme.spacing.xs,
+  },
+  statLabel: {
+    fontSize: Theme.typography.fontSize.sm,
+    textAlign: 'center',
+  },
+  recentActivitySection: {
+    marginBottom: Theme.spacing.xl,
+  },
+  recentOrderCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: Theme.spacing.lg,
+    marginBottom: Theme.spacing.md,
+    borderRadius: Theme.borderRadius.lg,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  recentOrderLeft: {
+    flex: 1,
+  },
+  recentOrderTitle: {
+    fontSize: Theme.typography.fontSize.md,
+    fontWeight: Theme.typography.fontWeight.medium,
+    marginBottom: Theme.spacing.xs,
+  },
+  recentOrderSubtitle: {
+    fontSize: Theme.typography.fontSize.sm,
+    marginBottom: Theme.spacing.xs,
+  },
+  recentOrderDate: {
+    fontSize: Theme.typography.fontSize.sm,
+  },
+  recentOrderRight: {
+    alignItems: 'flex-end',
+  },
+  orderStatusBadge: {
+    paddingHorizontal: Theme.spacing.sm,
+    paddingVertical: Theme.spacing.xs,
+    borderRadius: Theme.borderRadius.sm,
+    marginBottom: Theme.spacing.xs,
+  },
+  orderStatusText: {
+    fontSize: Theme.typography.fontSize.xs,
+    fontWeight: Theme.typography.fontWeight.bold,
+  },
+  // Enhanced Home Screen Styles
+  sectionTitle: {
+    fontSize: Theme.typography.fontSize.lg,
+    fontWeight: Theme.typography.fontWeight.bold,
+    marginBottom: Theme.spacing.md,
+  },
+  orderStatusSection: {
+    marginBottom: Theme.spacing.xl,
+  },
+  orderStatusGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  orderStatusCard: {
+    flex: 1,
+    alignItems: 'center',
+    padding: Theme.spacing.lg,
+    marginHorizontal: Theme.spacing.xs,
+    borderRadius: Theme.borderRadius.lg,
+    elevation: 2,
+  },
+  orderStatusIcon: {
+    fontSize: Theme.typography.fontSize.xl,
+    marginBottom: Theme.spacing.sm,
+  },
+  orderStatusValue: {
+    fontSize: Theme.typography.fontSize.xl,
+    fontWeight: Theme.typography.fontWeight.bold,
+    marginBottom: Theme.spacing.xs,
+  },
+  orderStatusLabel: {
+    fontSize: Theme.typography.fontSize.sm,
+    textAlign: 'center',
+  },
+  quickActionsSection: {
+    marginBottom: Theme.spacing.xl,
+  },
+  quickActionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  quickActionButton: {
+    width: '48%',
+    alignItems: 'center',
+    padding: Theme.spacing.lg,
+    marginBottom: Theme.spacing.md,
+    borderRadius: Theme.borderRadius.lg,
+    elevation: 3,
+  },
+  quickActionIcon: {
+    fontSize: Theme.typography.fontSize.xl,
+    marginBottom: Theme.spacing.sm,
+  },
+  quickActionText: {
+    fontSize: Theme.typography.fontSize.sm,
+    fontWeight: Theme.typography.fontWeight.medium,
+    textAlign: 'center',
   },
 });
 

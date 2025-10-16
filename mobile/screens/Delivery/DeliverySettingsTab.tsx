@@ -42,6 +42,11 @@ const DeliverySettingsTab: React.FC<DeliverySettingsTabProps> = ({
       onPress: () => navigation.navigate("ChangePassword"),
     },
     {
+      title: "Delivery History",
+      icon: "time-outline",
+      onPress: () => navigation.navigate("DeliveryHistory"),
+    },
+    {
       title: "Notifications",
       icon: "notifications-outline",
       onPress: () => navigation.navigate("Notifications"),

@@ -47,6 +47,11 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
       onPress: () => navigation.navigate("ChangePassword"),
     },
     {
+      title: "Delivery Management",
+      icon: "bicycle-outline",
+      onPress: () => navigation.navigate("DeliveryManagement"),
+    },
+    {
       title: "Notifications",
       icon: "notifications-outline",
       onPress: () => navigation.navigate("Notifications"),

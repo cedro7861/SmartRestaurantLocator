@@ -21,18 +21,24 @@ import RestaurantTab from "../screens/Owner/RestaurantTab";
 import OrdersTab from "../screens/Owner/OrdersTab";
 import MenuTab from "../screens/Owner/MenuTab";
 import SettingsTab from "../screens/Owner/SettingsTab";
+import OwnerDashboard from "../screens/Owner/Dashboard";
 import AddRestaurant from "../screens/Owner/AddRestaurant";
 import ViewRestaurants from "../screens/Owner/ViewRestaurants";
 import EditRestaurant from "../screens/Owner/EditRestaurant";
 import AddMenuItem from "../screens/Owner/AddMenuItem";
 import ManageOrders from "../screens/Owner/ManageOrders";
 import ChangePassword from "../screens/Owner/ChangePassword";
+import DeliveryManagement from "../screens/Owner/DeliveryManagement";
 import DeliveryDeliveriesTab from "../screens/Delivery/DeliveryDeliveriesTab";
 import DeliveryHistoryTab from "../screens/Delivery/DeliveryHistoryTab";
 import DeliveryEarningsTab from "../screens/Delivery/DeliveryEarningsTab";
 import DeliverySettingsTab from "../screens/Delivery/DeliverySettingsTab";
 import DeliveryChangePassword from "../screens/Delivery/DeliveryChangePassword";
-import { CustomerDashboard } from "../screens/Customer";
+import DeliveryMapTab from "../screens/Delivery/DeliveryMapTab";
+import { DeliveryDashboard } from "../screens/Delivery";
+import HomeScreen from "../screens/Customer/HomeScreen";
+import MapScreen from "../screens/Customer/MapScreen";
+import OrdersScreen from "../screens/Customer/OrdersScreen";
 import RestaurantDetail from "../screens/Customer/RestaurantDetail";
 import CustomerSettingsTab from "../screens/Customer/SettingsTab";
 import LogoutScreen from "../screens/Customer/LogoutScreen";
@@ -166,6 +172,18 @@ const OwnerNavigator = () => {
       <OwnerStack.Screen name="AddMenuItem" component={AddMenuItem} />
       <OwnerStack.Screen name="ManageOrders" component={ManageOrders} />
       <OwnerStack.Screen
+        name="DeliveryManagement"
+        options={{
+          title: "Delivery Management",
+          headerStyle: { backgroundColor: Theme.colors.surface },
+          headerTintColor: "#fff",
+          headerTitleStyle: { fontWeight: "bold" },
+          headerShown: true,
+        }}
+      >
+        {(props: any) => <DeliveryManagement {...props} user={user} />}
+      </OwnerStack.Screen>
+      <OwnerStack.Screen
         name="Profile"
         options={{
           title: "Profile",
@@ -215,10 +233,10 @@ const DeliveryTabNavigator = () => {
         tabBarIcon: ({ focused, color, size }) => {
           let iconName: any;
 
-          if (route.name === "Deliveries") {
+          if (route.name === "Home") {
+            iconName = focused ? "home" : "home-outline";
+          } else if (route.name === "Deliveries") {
             iconName = focused ? "list" : "list-outline";
-          } else if (route.name === "History") {
-            iconName = focused ? "time" : "time-outline";
           } else if (route.name === "Earnings") {
             iconName = focused ? "cash" : "cash-outline";
           } else if (route.name === "Settings") {
@@ -231,11 +249,18 @@ const DeliveryTabNavigator = () => {
         tabBarInactiveTintColor: "gray",
       })}
     >
+      <DeliveryTab.Screen name="Home">
+        {(props: any) => (
+          <DeliveryDashboard
+            {...props}
+            user={user}
+            onLogout={logout}
+            activeTab="home"
+          />
+        )}
+      </DeliveryTab.Screen>
       <DeliveryTab.Screen name="Deliveries">
         {(props: any) => <DeliveryDeliveriesTab {...props} user={user} />}
-      </DeliveryTab.Screen>
-      <DeliveryTab.Screen name="History">
-        {(props: any) => <DeliveryHistoryTab {...props} user={user} />}
       </DeliveryTab.Screen>
       <DeliveryTab.Screen name="Earnings">
         {(props: any) => <DeliveryEarningsTab {...props} user={user} />}
@@ -266,6 +291,30 @@ const DeliveryNavigator = () => {
         }}
       />
       <DeliveryStack.Screen
+        name="DeliveryHistory"
+        options={{
+          title: "Delivery History",
+          headerStyle: { backgroundColor: Theme.colors.surface },
+          headerTintColor: "#fff",
+          headerTitleStyle: { fontWeight: "bold" },
+          headerShown: true,
+        }}
+      >
+        {(props: any) => <DeliveryHistoryTab {...props} user={user} />}
+      </DeliveryStack.Screen>
+      <DeliveryStack.Screen
+        name="DeliveryMap"
+        options={{
+          title: "Delivery Map",
+          headerStyle: { backgroundColor: Theme.colors.surface },
+          headerTintColor: "#fff",
+          headerTitleStyle: { fontWeight: "bold" },
+          headerShown: true,
+        }}
+      >
+        {(props: any) => <DeliveryMapTab {...props} user={user} />}
+      </DeliveryStack.Screen>
+      <DeliveryStack.Screen
         name="Notifications"
         options={{
           title: "Notifications",
@@ -290,7 +339,9 @@ const CustomerTabNavigator = () => {
         tabBarIcon: ({ focused, color, size }) => {
           let iconName: any;
 
-          if (route.name === "Map") {
+          if (route.name === "Home") {
+            iconName = focused ? "home" : "home-outline";
+          } else if (route.name === "Map") {
             iconName = focused ? "map" : "map-outline";
           } else if (route.name === "Orders") {
             iconName = focused ? "list" : "list-outline";
@@ -304,23 +355,28 @@ const CustomerTabNavigator = () => {
         tabBarInactiveTintColor: "gray",
       })}
     >
-      <CustomerTab.Screen name="Map">
+      <CustomerTab.Screen name="Home">
         {(props: any) => (
-          <CustomerDashboard
+          <HomeScreen
             {...props}
             user={user}
             onLogout={logout}
-            activeTab="map"
+          />
+        )}
+      </CustomerTab.Screen>
+      <CustomerTab.Screen name="Map">
+        {(props: any) => (
+          <MapScreen
+            {...props}
+            user={user}
           />
         )}
       </CustomerTab.Screen>
       <CustomerTab.Screen name="Orders">
         {(props: any) => (
-          <CustomerDashboard
+          <OrdersScreen
             {...props}
             user={user}
-            onLogout={logout}
-            activeTab="orders"
           />
         )}
       </CustomerTab.Screen>
@@ -342,7 +398,9 @@ const OwnerTabNavigator = () => {
         tabBarIcon: ({ focused, color, size }) => {
           let iconName: any;
 
-          if (route.name === "Restaurant") {
+          if (route.name === "Home") {
+            iconName = focused ? "home" : "home-outline";
+          } else if (route.name === "Restaurant") {
             iconName = focused ? "restaurant" : "restaurant-outline";
           } else if (route.name === "Orders") {
             iconName = focused ? "list" : "list-outline";
@@ -358,6 +416,16 @@ const OwnerTabNavigator = () => {
         tabBarInactiveTintColor: "gray",
       })}
     >
+      <OwnerTab.Screen name="Home">
+        {(props: any) => (
+          <OwnerDashboard
+            {...props}
+            user={user}
+            onLogout={logout}
+            activeTab="home"
+          />
+        )}
+      </OwnerTab.Screen>
       <OwnerTab.Screen name="Restaurant">
         {(props: any) => <RestaurantTab {...props} user={user} />}
       </OwnerTab.Screen>

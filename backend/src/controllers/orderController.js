@@ -5,55 +5,146 @@ const prisma = new PrismaClient();
 // 📌 Get orders for a customer
 export const getCustomerOrders = async (req, res) => {
   try {
-    const customerId = req.user.id; // Assuming auth middleware
+    const customerId = req.user?.id;
+
+    if (!customerId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
     const orders = await prisma.order.findMany({
       where: { customer_id: customerId },
-      include: {
+      select: {
+        id: true,
+        customer_id: true,
+        restaurant_id: true,
+        total_price: true,
+        status: true,
+        order_type: true,
+        order_time: true,
         restaurant: {
-          select: { name: true, location: true, contact_info: true }
+          select: {
+            name: true,
+            location: true,
+            contact_info: true,
+            latitude: true,
+            longitude: true,
+            status: true,
+            owner: { select: { name: true, phone: true } },
+          },
         },
         order_items: {
-          include: {
-            item: true
-          }
-        }
+          select: {
+            id: true,
+            item_id: true,
+            quantity: true,
+            preferences: true,
+            item: {
+              select: {
+                id: true,
+                name: true,
+                price: true,
+                description: true,
+              },
+            },
+          },
+        },
+        deliveries: {
+          where: {
+            status: {
+              in: ['pending', 'on_route', 'delivered']
+            }
+          },
+          select: {
+            delivery_id: true,
+            status: true,
+            latitude: true,
+            longitude: true,
+            delivery_person: {
+              select: { user_id: true, name: true, phone: true },
+            },
+          },
+        },
       },
-      orderBy: { order_time: 'desc' }
+      orderBy: { order_time: "desc" },
     });
-    res.json(orders);
+
+    return res.json(orders ?? []);
   } catch (error) {
-    res.status(500).json({ error: "Failed to fetch orders" });
+    console.error("Error fetching customer orders:", error);
+    return res.status(500).json({
+      error: "Failed to fetch orders",
+      message: "Unable to load your order history. Please try again later.",
+    });
   }
 };
 
 // 📌 Get orders for owner's restaurants
 export const getOwnerOrders = async (req, res) => {
   try {
-    const ownerId = req.user.id;
+    const ownerId = req.user?.id;
+
+    if (!ownerId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
     const orders = await prisma.order.findMany({
       where: {
         restaurant: {
           owner_id: ownerId
         }
       },
-      include: {
+      select: {
+        id: true,
+        customer_id: true,
+        restaurant_id: true,
+        total_price: true,
+        status: true,
+        order_type: true,
+        order_time: true,
         customer: {
-          select: { name: true, email: true, phone: true }
+          select: { name: true, email: true, phone: true },
         },
         restaurant: {
-          select: { name: true }
+          select: { name: true, location: true, contact_info: true, status: true },
         },
         order_items: {
-          include: {
-            item: true
-          }
-        }
+          select: {
+            id: true,
+            item_id: true,
+            quantity: true,
+            preferences: true,
+            item: {
+              select: {
+                id: true,
+                name: true,
+                price: true,
+                description: true,
+              },
+            },
+          },
+        },
+        deliveries: {
+          select: {
+            delivery_id: true,
+            status: true,
+            latitude: true,
+            longitude: true,
+            delivery_person: {
+              select: { user_id: true, name: true, phone: true },
+            },
+          },
+        },
       },
-      orderBy: { order_time: 'desc' }
+      orderBy: { order_time: "desc" },
     });
-    res.json(orders);
+
+    return res.json(orders ?? []);
   } catch (error) {
-    res.status(500).json({ error: "Failed to fetch orders" });
+    console.error("Error fetching owner orders:", error);
+    return res.status(500).json({
+      error: "Failed to fetch orders",
+      message: "Unable to load restaurant orders. Please try again later.",
+    });
   }
 };
 
@@ -61,154 +152,290 @@ export const getOwnerOrders = async (req, res) => {
 export const createOrder = async (req, res) => {
   try {
     const { restaurant_id, items, order_type } = req.body;
-    const customerId = req.user.id;
+    const customerId = req.user?.id;
 
-    // Validate order type
-    const validOrderTypes = ['pickup', 'delivery', 'dine_in'];
-    if (!order_type || !validOrderTypes.includes(order_type)) {
-      return res.status(400).json({ error: "Invalid order type. Must be 'pickup', 'delivery', or 'dine_in'" });
+    if (!customerId) {
+      return res.status(401).json({ error: "Authentication required" });
     }
 
-    // Calculate total price
+    const validOrderTypes = ["pickup", "delivery", "dine_in"];
+    if (!validOrderTypes.includes(order_type)) {
+      return res.status(400).json({
+        error: "Invalid order type. Must be 'pickup', 'delivery', or 'dine_in'",
+      });
+    }
+
     let totalPrice = 0;
     const orderItems = [];
 
     for (const item of items) {
       const menuItem = await prisma.menuItem.findUnique({
-        where: { id: item.item_id }
+        where: { id: item.item_id },
       });
+
       if (!menuItem) {
         return res.status(404).json({ error: `Menu item ${item.item_id} not found` });
       }
+
       totalPrice += menuItem.price * item.quantity;
       orderItems.push({
         item_id: item.item_id,
         quantity: item.quantity,
-        preferences: item.preferences || ''
+        preferences: item.preferences || "",
       });
     }
 
     const order = await prisma.order.create({
       data: {
         customer_id: customerId,
-        restaurant_id: restaurant_id,
+        restaurant_id,
         total_price: totalPrice,
-        order_type: order_type,
-        order_items: {
-          create: orderItems
-        }
+        order_type,
+        order_items: { create: orderItems },
       },
-      include: {
+      select: {
+        id: true,
+        customer_id: true,
+        restaurant_id: true,
+        total_price: true,
+        status: true,
+        order_type: true,
+        order_time: true,
         order_items: {
-          include: {
-            item: true
-          }
+          select: {
+            id: true,
+            item_id: true,
+            quantity: true,
+            preferences: true,
+            item: {
+              select: {
+                id: true,
+                name: true,
+                price: true,
+              },
+            },
+          },
         },
         deliveries: {
-          include: {
+          select: {
+            delivery_id: true,
+            status: true,
+            latitude: true,
+            longitude: true,
             delivery_person: {
-              select: { user_id: true, name: true, phone: true }
-            }
-          }
-        }
-      }
+              select: {
+                user_id: true,
+                name: true,
+                phone: true,
+              },
+            },
+          },
+        },
+      },
     });
 
-    res.status(201).json({ message: "Order created successfully", order });
+    return res.status(201).json({ message: "Order created successfully", order });
   } catch (error) {
-    res.status(500).json({ error: "Failed to create order" });
+    console.error("Error creating order:", error);
+    return res.status(500).json({ error: "Failed to create order" });
   }
 };
 
-// 📌 Get all orders (Admin only)
+// 📌 Admin — Get all orders
 export const getAllOrders = async (req, res) => {
   try {
+    if (!req.user || req.user.role !== "admin") {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
     const orders = await prisma.order.findMany({
-      include: {
-        customer: {
-          select: { name: true, email: true, phone: true }
-        },
+      select: {
+        id: true,
+        customer_id: true,
+        restaurant_id: true,
+        total_price: true,
+        status: true,
+        order_type: true,
+        order_time: true,
+        customer: { select: { name: true, email: true, phone: true } },
         restaurant: {
-          select: { name: true, location: true, contact_info: true },
-          include: {
+          select: {
+            name: true,
+            location: true,
+            contact_info: true,
+            latitude: true,
+            longitude: true,
+            status: true,
             owner: {
               select: { name: true, email: true, phone: true }
-            }
-          }
+            },
+          },
         },
         order_items: {
-          include: {
-            item: true
-          }
-        }
+          select: {
+            id: true,
+            item_id: true,
+            quantity: true,
+            preferences: true,
+            item: {
+              select: {
+                id: true,
+                name: true,
+                price: true,
+                description: true
+              }
+            },
+          },
+        },
+        deliveries: {
+          select: {
+            delivery_id: true,
+            status: true,
+            latitude: true,
+            longitude: true,
+            delivery_person: {
+              select: { user_id: true, name: true, phone: true },
+            },
+          },
+        },
       },
-      orderBy: { order_time: 'desc' }
+      orderBy: { order_time: "desc" },
     });
-    res.json(orders);
+
+    return res.json(orders ?? []);
   } catch (error) {
-    res.status(500).json({ error: "Failed to fetch orders" });
+    console.error("Error fetching all orders:", error);
+    return res.status(500).json({
+      error: "Failed to fetch orders",
+      message: "Unable to load system orders. Please try again later.",
+    });
+  }
+};
+
+// 📌 Get delivery history
+export const getDeliveryHistory = async (req, res) => {
+  try {
+    const deliveryPersonId = req.user?.id;
+
+    if (!deliveryPersonId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    const deliveries = await prisma.delivery.findMany({
+      where: { delivery_person_id: deliveryPersonId, status: "delivered" },
+      select: {
+        order: {
+          select: {
+            id: true,
+            customer_id: true,
+            restaurant_id: true,
+            total_price: true,
+            status: true,
+            order_type: true,
+            order_time: true,
+            customer: {
+              select: { name: true, email: true, phone: true }
+            },
+            restaurant: {
+              select: {
+                name: true,
+                location: true,
+                contact_info: true,
+                latitude: true,
+                longitude: true,
+                status: true,
+              },
+            },
+            order_items: {
+              select: {
+                id: true,
+                item_id: true,
+                quantity: true,
+                preferences: true,
+                item: {
+                  select: { id: true, name: true, price: true, description: true }
+                },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { order: { order_time: "desc" } },
+    });
+
+    const orders = deliveries.map((d) => d.order);
+    return res.json(orders ?? []);
+  } catch (error) {
+    console.error("Error fetching delivery history:", error);
+    return res.status(500).json({
+      error: "Failed to fetch delivery history",
+      message: error.message,
+    });
   }
 };
 
 // 📌 Get available deliveries (orders ready for delivery)
 export const getAvailableDeliveries = async (req, res) => {
   try {
+    // Check if user exists and is authenticated
+    if (!req.user || req.user.role !== 'delivery') {
+      return res.status(403).json({ error: "Delivery person access required" });
+    }
+
     const orders = await prisma.order.findMany({
       where: { status: 'ready' },
-      include: {
+      select: {
+        id: true,
+        customer_id: true,
+        restaurant_id: true,
+        total_price: true,
+        status: true,
+        order_type: true,
+        order_time: true,
         customer: {
           select: { name: true, email: true, phone: true }
         },
         restaurant: {
-          select: { name: true, location: true, contact_info: true, owner: { select: { name: true, email: true, phone: true } } }
+          select: {
+            name: true,
+            location: true,
+            contact_info: true,
+            latitude: true,
+            longitude: true,
+            status: true,
+            owner: {
+              select: { name: true, email: true, phone: true }
+            }
+          }
         },
         order_items: {
-          include: {
-            item: true
-          }
-        }
-      },
-      orderBy: { order_time: 'asc' }
-    });
-    res.json(orders);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to fetch available deliveries" });
-  }
-};
-
-// 📌 Get delivery history (delivered orders for the delivery person)
-export const getDeliveryHistory = async (req, res) => {
-  try {
-    const deliveryPersonId = req.user.id;
-    const deliveries = await prisma.delivery.findMany({
-      where: {
-        delivery_person_id: deliveryPersonId,
-        status: 'delivered'
-      },
-      include: {
-        order: {
-          include: {
-            customer: {
-              select: { name: true, email: true, phone: true }
-            },
-            restaurant: {
-              select: { name: true, location: true, contact_info: true }
-            },
-            order_items: {
-              include: {
-                item: true
+          select: {
+            id: true,
+            item_id: true,
+            quantity: true,
+            preferences: true,
+            item: {
+              select: {
+                id: true,
+                name: true,
+                price: true,
+                description: true
               }
             }
           }
         }
       },
-      orderBy: { order: { order_time: 'desc' } }
+      orderBy: { order_time: 'asc' }
     });
 
-    const orders = deliveries.map(d => d.order);
-    res.json(orders);
+    // Return empty array if no deliveries available (not an error)
+    return res.json(orders ?? []);
   } catch (error) {
-    res.status(500).json({ error: "Failed to fetch delivery history" });
+    console.error('Error fetching available deliveries:', error);
+    return res.status(500).json({
+      error: "Failed to fetch available deliveries",
+      message: "Unable to load available deliveries. Please try again later."
+    });
   }
 };
 
@@ -218,13 +445,40 @@ export const updateOrderStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
+    const validStatuses = [
+      "pending",
+      "confirmed",
+      "preparing",
+      "ready",
+      "delivering",
+      "delivered",
+      "cancelled",
+      "rejected",
+    ];
+
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: "Invalid order status" });
+    }
+
+    const existingOrder = await prisma.order.findUnique({
+      where: { id: Number(id) },
+    });
+
+    if (!existingOrder) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
     const updatedOrder = await prisma.order.update({
       where: { id: Number(id) },
       data: { status },
     });
 
-    res.json(updatedOrder);
+    return res.json(updatedOrder);
   } catch (error) {
-    res.status(500).json({ error: "Failed to update order" });
+    console.error("Error updating order status:", error);
+    return res.status(500).json({
+      error: "Failed to update order",
+      message: error.message,
+    });
   }
 };

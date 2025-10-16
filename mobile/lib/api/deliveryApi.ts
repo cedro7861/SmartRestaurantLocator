@@ -75,6 +75,15 @@ export const assignDelivery = async (data: {
   return response.data;
 };
 
+// 📌 Reassign delivery person to order
+export const reassignDelivery = async (data: {
+  delivery_id: number;
+  new_delivery_person_id: number;
+}): Promise<any> => {
+  const response = await api.post('/deliveries/reassign', data);
+  return response.data;
+};
+
 // 📌 Get available delivery persons
 export const getAvailableDeliveryPersons = async (): Promise<DeliveryPerson[]> => {
   const response = await api.get('/deliveries/persons/available');
@@ -103,5 +112,11 @@ export const getDeliveryPersonDeliveries = async (): Promise<Delivery[]> => {
 // 📌 Get all deliveries (Admin)
 export const getAllDeliveries = async (): Promise<Delivery[]> => {
   const response = await api.get('/deliveries/admin/all');
+  return response.data;
+};
+
+// 📌 Get deliveries for owner's restaurants (Owner)
+export const getOwnerDeliveries = async (): Promise<Delivery[]> => {
+  const response = await api.get('/deliveries/owner');
   return response.data;
 };

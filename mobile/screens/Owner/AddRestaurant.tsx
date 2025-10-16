@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,10 +7,17 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  Image,
+  Modal,
+  Dimensions,
 } from 'react-native';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import * as Location from 'expo-location';
+import * as ImagePicker from 'expo-image-picker';
 import { Theme } from '../../lib/colors';
 import { createRestaurant } from '../../lib/api/restaurantApi';
 import { useAuth } from '../../lib/AuthContext';
+import { Ionicons } from '@expo/vector-icons';
 
 interface AddRestaurantProps {
   navigation: any;
@@ -28,7 +35,108 @@ const AddRestaurant: React.FC<AddRestaurantProps> = ({ navigation }) => {
     image: '',
   });
   const [loading, setLoading] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [showMap, setShowMap] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState<Location.LocationObject | null>(null);
+  const [mapRegion, setMapRegion] = useState({
+    latitude: -1.9441,
+    longitude: 30.0619,
+    latitudeDelta: 0.0922,
+    longitudeDelta: 0.0421,
+  });
   const { colors, spacing, borderRadius, typography } = Theme;
+
+  useEffect(() => {
+    getCurrentLocation();
+  }, []);
+
+  const getCurrentLocation = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Location permission is required to select restaurant location');
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({});
+      setCurrentLocation(location);
+      setMapRegion({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        latitudeDelta: 0.0922,
+        longitudeDelta: 0.0421,
+      });
+    } catch (error) {
+      console.error('Error getting location:', error);
+      Alert.alert('Error', 'Failed to get current location');
+    }
+  };
+
+  const pickImage = async () => {
+    Alert.alert(
+      'Select Image',
+      'Choose an option',
+      [
+        { text: 'Camera', onPress: openCamera },
+        { text: 'Gallery', onPress: openGallery },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
+
+  const openCamera = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Denied', 'Camera permission is required');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      setSelectedImage(result.assets[0].uri);
+      setFormData({ ...formData, image: result.assets[0].uri });
+    }
+  };
+
+  const openGallery = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Denied', 'Gallery permission is required');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      setSelectedImage(result.assets[0].uri);
+      setFormData({ ...formData, image: result.assets[0].uri });
+    }
+  };
+
+  const handleMapPress = (event: any) => {
+    const { coordinate } = event.nativeEvent;
+    setFormData({
+      ...formData,
+      latitude: coordinate.latitude.toString(),
+      longitude: coordinate.longitude.toString(),
+    });
+    setMapRegion({
+      ...mapRegion,
+      latitude: coordinate.latitude,
+      longitude: coordinate.longitude,
+    });
+  };
 
   const validateForm = () => {
     if (!formData.name.trim()) {
@@ -113,40 +221,47 @@ const AddRestaurant: React.FC<AddRestaurantProps> = ({ navigation }) => {
           keyboardType="phone-pad"
         />
 
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Location Coordinates (Optional)</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Restaurant Location</Text>
         <Text style={[styles.note, { color: colors.textSecondary }]}>
-          Add coordinates to show your restaurant on the map. You can find coordinates using Google Maps.
+          Select your restaurant location on the map below.
         </Text>
 
-        <Text style={[styles.label, { color: colors.text }]}>Latitude</Text>
-        <TextInput
-          style={[styles.input, { color: colors.text, borderColor: colors.border }]}
-          placeholder="e.g., -1.9441"
-          placeholderTextColor={colors.textSecondary}
-          value={formData.latitude}
-          onChangeText={(text) => setFormData({ ...formData, latitude: text })}
-          keyboardType="numeric"
-        />
+        <TouchableOpacity
+          style={[styles.mapButton, { backgroundColor: colors.surface }]}
+          onPress={() => setShowMap(true)}
+        >
+          <Ionicons name="map" size={24} color={colors.primary} />
+          <Text style={[styles.mapButtonText, { color: colors.primary }]}>
+            {formData.latitude && formData.longitude
+              ? `Location Selected: ${parseFloat(formData.latitude).toFixed(4)}, ${parseFloat(formData.longitude).toFixed(4)}`
+              : 'Select Location on Map'
+            }
+          </Text>
+          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+        </TouchableOpacity>
 
-        <Text style={[styles.label, { color: colors.text }]}>Longitude</Text>
-        <TextInput
-          style={[styles.input, { color: colors.text, borderColor: colors.border }]}
-          placeholder="e.g., 30.0619"
-          placeholderTextColor={colors.textSecondary}
-          value={formData.longitude}
-          onChangeText={(text) => setFormData({ ...formData, longitude: text })}
-          keyboardType="numeric"
-        />
+        {formData.latitude && formData.longitude && (
+          <Text style={[styles.coordinatesText, { color: colors.textSecondary }]}>
+            Coordinates: {parseFloat(formData.latitude).toFixed(6)}, {parseFloat(formData.longitude).toFixed(6)}
+          </Text>
+        )}
 
-        <Text style={[styles.label, { color: colors.text }]}>Restaurant Image URL</Text>
-        <TextInput
-          style={[styles.input, { color: colors.text, borderColor: colors.border }]}
-          placeholder="https://example.com/restaurant-image.jpg"
-          placeholderTextColor={colors.textSecondary}
-          value={formData.image}
-          onChangeText={(text) => setFormData({ ...formData, image: text })}
-          autoCapitalize="none"
-        />
+        <Text style={[styles.label, { color: colors.text }]}>Restaurant Image</Text>
+        <TouchableOpacity
+          style={[styles.imageButton, { backgroundColor: colors.surface }]}
+          onPress={pickImage}
+        >
+          {selectedImage ? (
+            <Image source={{ uri: selectedImage }} style={styles.selectedImage} />
+          ) : (
+            <View style={styles.imagePlaceholder}>
+              <Ionicons name="camera" size={48} color={colors.textSecondary} />
+              <Text style={[styles.imagePlaceholderText, { color: colors.textSecondary }]}>
+                Tap to select image
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.submitButton, { backgroundColor: loading ? colors.textSecondary : colors.primary }]}
@@ -165,6 +280,53 @@ const AddRestaurant: React.FC<AddRestaurantProps> = ({ navigation }) => {
           <Text style={[styles.cancelButtonText, { color: colors.background }]}>Cancel</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Map Modal */}
+      <Modal
+        visible={showMap}
+        animationType="slide"
+        onRequestClose={() => setShowMap(false)}
+      >
+        <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+          <View style={styles.modalHeader}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Select Restaurant Location</Text>
+            <TouchableOpacity onPress={() => setShowMap(false)}>
+              <Ionicons name="close" size={24} color={colors.text} />
+            </TouchableOpacity>
+          </View>
+
+          <MapView
+            provider={PROVIDER_GOOGLE}
+            style={styles.map}
+            region={mapRegion}
+            onPress={handleMapPress}
+            showsUserLocation={true}
+            showsMyLocationButton={true}
+          >
+            {formData.latitude && formData.longitude && (
+              <Marker
+                coordinate={{
+                  latitude: parseFloat(formData.latitude),
+                  longitude: parseFloat(formData.longitude),
+                }}
+                title="Restaurant Location"
+                description="Selected location for your restaurant"
+              />
+            )}
+          </MapView>
+
+          <View style={styles.modalFooter}>
+            <TouchableOpacity
+              style={[styles.modalButton, { backgroundColor: colors.primary }]}
+              onPress={() => setShowMap(false)}
+            >
+              <Text style={[styles.modalButtonText, { color: colors.background }]}>
+                Confirm Location
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 };
@@ -206,6 +368,47 @@ const styles = StyleSheet.create({
     marginBottom: Theme.spacing.lg,
     fontSize: Theme.typography.fontSize.md,
   },
+  mapButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Theme.spacing.md,
+    borderRadius: Theme.borderRadius.md,
+    marginBottom: Theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: Theme.colors.border,
+  },
+  mapButtonText: {
+    flex: 1,
+    fontSize: Theme.typography.fontSize.md,
+    marginLeft: Theme.spacing.sm,
+  },
+  coordinatesText: {
+    fontSize: Theme.typography.fontSize.sm,
+    marginBottom: Theme.spacing.lg,
+    fontStyle: 'italic',
+  },
+  imageButton: {
+    height: 150,
+    borderRadius: Theme.borderRadius.md,
+    marginBottom: Theme.spacing.lg,
+    borderWidth: 1,
+    borderColor: Theme.colors.border,
+    overflow: 'hidden',
+  },
+  selectedImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  imagePlaceholder: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imagePlaceholderText: {
+    fontSize: Theme.typography.fontSize.md,
+    marginTop: Theme.spacing.sm,
+  },
   submitButton: {
     padding: Theme.spacing.md,
     borderRadius: Theme.borderRadius.md,
@@ -222,6 +425,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelButtonText: {
+    fontSize: Theme.typography.fontSize.md,
+    fontWeight: Theme.typography.fontWeight.medium,
+  },
+  modalContainer: {
+    flex: 1,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: Theme.spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: Theme.colors.border,
+  },
+  modalTitle: {
+    fontSize: Theme.typography.fontSize.lg,
+    fontWeight: Theme.typography.fontWeight.bold,
+  },
+  map: {
+    flex: 1,
+  },
+  modalFooter: {
+    padding: Theme.spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: Theme.colors.border,
+  },
+  modalButton: {
+    padding: Theme.spacing.md,
+    borderRadius: Theme.borderRadius.md,
+    alignItems: 'center',
+  },
+  modalButtonText: {
     fontSize: Theme.typography.fontSize.md,
     fontWeight: Theme.typography.fontWeight.medium,
   },

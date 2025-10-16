@@ -17,12 +17,32 @@ const DeliveryDeliveriesTab: React.FC<DeliveryDeliveriesTabProps> = ({ navigatio
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [currentLocation, setCurrentLocation] = useState<Location.LocationObject | null>(null);
   const [selectedDelivery, setSelectedDelivery] = useState<Delivery | null>(null);
+  const [locationUpdateInterval, setLocationUpdateInterval] = useState<NodeJS.Timeout | null>(null);
   const { colors, spacing, borderRadius, typography } = Theme;
 
   useEffect(() => {
     loadDeliveries();
     getCurrentLocation();
   }, []);
+
+  // Start/stop location tracking based on active deliveries
+  useEffect(() => {
+    const hasActiveDeliveries = deliveries.some(d => d.status === 'on_route');
+
+    if (hasActiveDeliveries && !locationUpdateInterval) {
+      // Start location updates for active deliveries
+      startLocationTracking();
+    } else if (!hasActiveDeliveries && locationUpdateInterval) {
+      // Stop location updates when no active deliveries
+      stopLocationTracking();
+    }
+
+    return () => {
+      if (locationUpdateInterval) {
+        clearInterval(locationUpdateInterval);
+      }
+    };
+  }, [deliveries]);
 
   const getCurrentLocation = async () => {
     try {
@@ -34,8 +54,54 @@ const DeliveryDeliveriesTab: React.FC<DeliveryDeliveriesTabProps> = ({ navigatio
 
       const location = await Location.getCurrentPositionAsync({});
       setCurrentLocation(location);
+
+      // Start watching location for real-time updates
+      const locationSubscription = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.High,
+          timeInterval: 10000, // Update every 10 seconds
+          distanceInterval: 10, // Update every 10 meters
+        },
+        (newLocation) => {
+          setCurrentLocation(newLocation);
+        }
+      );
+
+      // Store subscription for cleanup
+      return () => locationSubscription.remove();
     } catch (error) {
       console.error('Error getting location:', error);
+    }
+  };
+
+  const startLocationTracking = () => {
+    console.log('Starting location tracking for active deliveries');
+    const interval = setInterval(async () => {
+      try {
+        if (currentLocation) {
+          // Update location for all active deliveries
+          const activeDeliveries = deliveries.filter(d => d.status === 'on_route');
+          for (const delivery of activeDeliveries) {
+            await updateDeliveryStatus(delivery.delivery_id, {
+              status: 'on_route', // Keep status the same
+              latitude: currentLocation.coords.latitude,
+              longitude: currentLocation.coords.longitude
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error updating delivery location:', error);
+      }
+    }, 30000); // Update every 30 seconds
+
+    setLocationUpdateInterval(interval);
+  };
+
+  const stopLocationTracking = () => {
+    console.log('Stopping location tracking');
+    if (locationUpdateInterval) {
+      clearInterval(locationUpdateInterval);
+      setLocationUpdateInterval(null);
     }
   };
 
@@ -63,7 +129,21 @@ const DeliveryDeliveriesTab: React.FC<DeliveryDeliveriesTabProps> = ({ navigatio
 
   const handleUpdateDeliveryStatus = async (deliveryId: number, newStatus: 'pending' | 'on_route' | 'delivered') => {
     try {
-      await updateDeliveryStatus(deliveryId, { status: newStatus });
+      let locationData: { latitude?: number; longitude?: number } = {};
+
+      // Include current location for 'on_route' status to enable live tracking
+      if (newStatus === 'on_route' && currentLocation) {
+        locationData = {
+          latitude: currentLocation.coords.latitude,
+          longitude: currentLocation.coords.longitude
+        };
+      }
+
+      await updateDeliveryStatus(deliveryId, {
+        status: newStatus,
+        ...locationData
+      });
+
       Alert.alert('Success', `Delivery status updated to ${newStatus.replace('_', ' ')}`);
       loadDeliveries(); // Refresh deliveries
     } catch (error) {
@@ -75,16 +155,63 @@ const DeliveryDeliveriesTab: React.FC<DeliveryDeliveriesTabProps> = ({ navigatio
     const phoneNumber = delivery.order.customer?.phone;
     if (phoneNumber) {
       const cleanPhoneNumber = phoneNumber.replace(/[^\d+]/g, '');
-      const url = `tel:${cleanPhoneNumber}`;
-      Linking.canOpenURL(url).then(supported => {
-        if (supported) {
-          Linking.openURL(url);
-        } else {
-          Alert.alert('Error', 'Phone calls are not supported on this device');
-        }
-      }).catch(() => {
-        Alert.alert('Error', 'Unable to make phone call. Please check the phone number format.');
-      });
+
+      // Show modern communication options
+      Alert.alert(
+        'Contact Customer',
+        `Choose how to contact ${delivery.order.customer?.name || 'the customer'}:`,
+        [
+          {
+            text: 'WhatsApp',
+            onPress: async () => {
+              const whatsappUrl = `whatsapp://send?phone=${cleanPhoneNumber}`;
+              try {
+                const supported = await Linking.canOpenURL(whatsappUrl);
+                if (supported) {
+                  await Linking.openURL(whatsappUrl);
+                } else {
+                  // Fallback to WhatsApp web
+                  const webWhatsappUrl = `https://wa.me/${cleanPhoneNumber}`;
+                  await Linking.openURL(webWhatsappUrl);
+                }
+              } catch (error) {
+                Alert.alert('Error', 'Unable to open WhatsApp. Please make sure it\'s installed.');
+              }
+            }
+          },
+          {
+            text: 'SMS',
+            onPress: async () => {
+              const smsUrl = `sms:${cleanPhoneNumber}`;
+              try {
+                const supported = await Linking.canOpenURL(smsUrl);
+                if (supported) {
+                  await Linking.openURL(smsUrl);
+                } else {
+                  Alert.alert('Error', 'SMS is not supported on this device');
+                }
+              } catch (error) {
+                Alert.alert('Error', 'Unable to send SMS. Please check the phone number format.');
+              }
+            }
+          },
+          {
+            text: 'Phone Call',
+            onPress: async () => {
+              const telUrl = `tel:${cleanPhoneNumber}`;
+              try {
+                await Linking.openURL(telUrl);
+              } catch (error) {
+                Alert.alert('Error', 'Unable to make phone call. Please check if your device supports phone calls or try WhatsApp/SMS instead.');
+              }
+            }
+          },
+          {
+            text: 'Cancel',
+            style: 'cancel'
+          }
+        ]
+      );
     } else {
       Alert.alert('Contact Unavailable', 'Customer contact information is not available.');
     }
@@ -94,16 +221,63 @@ const DeliveryDeliveriesTab: React.FC<DeliveryDeliveriesTabProps> = ({ navigatio
     const phoneNumber = delivery.order.restaurant.contact_info;
     if (phoneNumber) {
       const cleanPhoneNumber = phoneNumber.replace(/[^\d+]/g, '');
-      const url = `tel:${cleanPhoneNumber}`;
-      Linking.canOpenURL(url).then(supported => {
-        if (supported) {
-          Linking.openURL(url);
-        } else {
-          Alert.alert('Error', 'Phone calls are not supported on this device');
-        }
-      }).catch(() => {
-        Alert.alert('Error', 'Unable to make phone call. Please check the phone number format.');
-      });
+
+      // Show modern communication options
+      Alert.alert(
+        'Contact Restaurant',
+        `Choose how to contact ${delivery.order.restaurant.name}:`,
+        [
+          {
+            text: 'WhatsApp',
+            onPress: async () => {
+              const whatsappUrl = `whatsapp://send?phone=${cleanPhoneNumber}`;
+              try {
+                const supported = await Linking.canOpenURL(whatsappUrl);
+                if (supported) {
+                  await Linking.openURL(whatsappUrl);
+                } else {
+                  // Fallback to WhatsApp web
+                  const webWhatsappUrl = `https://wa.me/${cleanPhoneNumber}`;
+                  await Linking.openURL(webWhatsappUrl);
+                }
+              } catch (error) {
+                Alert.alert('Error', 'Unable to open WhatsApp. Please make sure it\'s installed.');
+              }
+            }
+          },
+          {
+            text: 'SMS',
+            onPress: async () => {
+              const smsUrl = `sms:${cleanPhoneNumber}`;
+              try {
+                const supported = await Linking.canOpenURL(smsUrl);
+                if (supported) {
+                  await Linking.openURL(smsUrl);
+                } else {
+                  Alert.alert('Error', 'SMS is not supported on this device');
+                }
+              } catch (error) {
+                Alert.alert('Error', 'Unable to send SMS. Please check the phone number format.');
+              }
+            }
+          },
+          {
+            text: 'Phone Call',
+            onPress: async () => {
+              const telUrl = `tel:${cleanPhoneNumber}`;
+              try {
+                await Linking.openURL(telUrl);
+              } catch (error) {
+                Alert.alert('Error', 'Unable to make phone call. Please check if your device supports phone calls or try WhatsApp/SMS instead.');
+              }
+            }
+          },
+          {
+            text: 'Cancel',
+            style: 'cancel'
+          }
+        ]
+      );
     } else {
       Alert.alert('Contact Unavailable', 'Restaurant contact information is not available.');
     }
@@ -173,16 +347,16 @@ const DeliveryDeliveriesTab: React.FC<DeliveryDeliveriesTabProps> = ({ navigatio
 
       <View style={styles.contactButtons}>
         <TouchableOpacity
-          style={[styles.contactButton, { borderColor: colors.primary }]}
+          style={[styles.contactButton, { borderColor: colors.primary, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.22, shadowRadius: 2.22, elevation: 3 }]}
           onPress={() => handleCallCustomer(item)}
         >
-          <Text style={[styles.contactButtonText, { color: colors.primary }]}>📞 Call Customer</Text>
+          <Text style={[styles.contactButtonText, { color: colors.primary }]}>📱 Contact Customer</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.contactButton, { borderColor: colors.primaryDark }]}
+          style={[styles.contactButton, { borderColor: colors.primaryDark, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.22, shadowRadius: 2.22, elevation: 3 }]}
           onPress={() => handleCallRestaurant(item)}
         >
-          <Text style={[styles.contactButtonText, { color: colors.primaryDark }]}>📞 Call Restaurant</Text>
+          <Text style={[styles.contactButtonText, { color: colors.primaryDark }]}>🏪 Contact Restaurant</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -486,16 +660,16 @@ const DeliveryDeliveriesTab: React.FC<DeliveryDeliveriesTabProps> = ({ navigatio
 
                     <View style={styles.modalContactButtons}>
                       <TouchableOpacity
-                        style={[styles.modalContactButton, { borderColor: colors.primary }]}
+                        style={[styles.modalContactButton, { borderColor: colors.primary, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.22, shadowRadius: 2.22, elevation: 3 }]}
                         onPress={() => handleCallCustomer(selectedDelivery)}
                       >
-                        <Text style={[styles.contactButtonText, { color: colors.primary }]}>📞 Customer</Text>
+                        <Text style={[styles.contactButtonText, { color: colors.primary }]}>📱 Customer</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
-                        style={[styles.modalContactButton, { borderColor: colors.primaryDark }]}
+                        style={[styles.modalContactButton, { borderColor: colors.primaryDark, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.22, shadowRadius: 2.22, elevation: 3 }]}
                         onPress={() => handleCallRestaurant(selectedDelivery)}
                       >
-                        <Text style={[styles.contactButtonText, { color: colors.primaryDark }]}>📞 Restaurant</Text>
+                        <Text style={[styles.contactButtonText, { color: colors.primaryDark }]}>🏪 Restaurant</Text>
                       </TouchableOpacity>
                     </View>
                   </View>

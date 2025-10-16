@@ -7,9 +7,12 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import { Theme } from '../../lib/colors';
 import { getOwnerOrders, updateOrderStatus, Order } from '../../lib/api/orderApi';
+import { getAvailableDeliveryPersons, assignDelivery, DeliveryPerson } from '../../lib/api/deliveryApi';
 
 interface ManageOrdersProps {
   navigation: any;
@@ -18,6 +21,10 @@ interface ManageOrdersProps {
 const ManageOrders: React.FC<ManageOrdersProps> = ({ navigation }) => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showDeliveryModal, setShowDeliveryModal] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [deliveryPersons, setDeliveryPersons] = useState<DeliveryPerson[]>([]);
+  const [selectedDeliveryPerson, setSelectedDeliveryPerson] = useState<number | null>(null);
   const { colors, spacing, borderRadius, typography } = Theme;
 
   useEffect(() => {
@@ -43,6 +50,40 @@ const ManageOrders: React.FC<ManageOrdersProps> = ({ navigation }) => {
     } catch (error) {
       Alert.alert('Error', 'Failed to update order status');
     }
+  };
+
+  const loadDeliveryPersons = async () => {
+    try {
+      const data = await getAvailableDeliveryPersons();
+      setDeliveryPersons(data);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to load delivery persons');
+    }
+  };
+
+  const handleAssignDelivery = async () => {
+    if (!selectedOrder || !selectedDeliveryPerson) return;
+
+    try {
+      await assignDelivery({
+        order_id: selectedOrder.id,
+        delivery_person_id: selectedDeliveryPerson,
+      });
+      Alert.alert('Success', 'Delivery person assigned successfully');
+      setShowDeliveryModal(false);
+      setSelectedOrder(null);
+      setSelectedDeliveryPerson(null);
+      loadOrders(); // Refresh orders
+    } catch (error) {
+      Alert.alert('Error', 'Failed to assign delivery person');
+    }
+  };
+
+  const openDeliveryModal = async (order: Order) => {
+    setSelectedOrder(order);
+    setSelectedDeliveryPerson(null);
+    await loadDeliveryPersons();
+    setShowDeliveryModal(true);
   };
 
   if (loading) {
@@ -84,9 +125,14 @@ const ManageOrders: React.FC<ManageOrdersProps> = ({ navigation }) => {
             <Text style={[styles.orderTime, { color: colors.textSecondary }]}>
               {new Date(order.order_time).toLocaleString()}
             </Text>
-            <Text style={[styles.orderTotal, { color: colors.primary }]}>
-              Total: ${order.total_price}
-            </Text>
+            <View style={styles.orderDetails}>
+              <Text style={[styles.orderType, { color: colors.primary }]}>
+                📋 {order.order_type.replace('_', ' ').toUpperCase()}
+              </Text>
+              <Text style={[styles.orderTotal, { color: colors.primary }]}>
+                Total: ${parseFloat(order.total_price.toString()).toFixed(2)}
+              </Text>
+            </View>
             <Text style={[styles.orderItems, { color: colors.textSecondary }]}>
               {order.order_items.length} item{order.order_items.length !== 1 ? 's' : ''}
             </Text>
@@ -130,13 +176,35 @@ const ManageOrders: React.FC<ManageOrdersProps> = ({ navigation }) => {
               </View>
             )}
 
-            {order.status === 'ready' && (
+            {order.status === 'ready' && order.order_type === 'delivery' && (
               <View style={styles.actions}>
                 <TouchableOpacity
                   style={[styles.actionButton, { backgroundColor: colors.primary }]}
-                  onPress={() => handleUpdateStatus(order.id, 'delivering')}
+                  onPress={() => openDeliveryModal(order)}
                 >
-                  <Text style={[styles.actionButtonText, { color: colors.background }]}>Start Delivery</Text>
+                  <Text style={[styles.actionButtonText, { color: colors.background }]}>Assign Delivery Person</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {order.status === 'ready' && order.order_type === 'pickup' && (
+              <View style={styles.actions}>
+                <TouchableOpacity
+                  style={[styles.actionButton, { backgroundColor: colors.success }]}
+                  onPress={() => handleUpdateStatus(order.id, 'delivered')}
+                >
+                  <Text style={[styles.actionButtonText, { color: colors.background }]}>Ready for Pickup</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {order.status === 'ready' && order.order_type === 'dine_in' && (
+              <View style={styles.actions}>
+                <TouchableOpacity
+                  style={[styles.actionButton, { backgroundColor: colors.success }]}
+                  onPress={() => handleUpdateStatus(order.id, 'delivered')}
+                >
+                  <Text style={[styles.actionButtonText, { color: colors.background }]}>Table Ready</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -154,6 +222,77 @@ const ManageOrders: React.FC<ManageOrdersProps> = ({ navigation }) => {
           </View>
         ))
       )}
+
+      {/* Delivery Assignment Modal */}
+      <Modal
+        visible={showDeliveryModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowDeliveryModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              Assign Delivery Person
+            </Text>
+
+            {selectedOrder && (
+              <View style={styles.modalOrderInfo}>
+                <Text style={[styles.modalOrderText, { color: colors.text }]}>
+                  Order #{selectedOrder.id} - {selectedOrder.customer?.name}
+                </Text>
+                <Text style={[styles.modalOrderText, { color: colors.textSecondary }]}>
+                  {selectedOrder.restaurant.name} • ${parseFloat(selectedOrder.total_price.toString()).toFixed(2)}
+                </Text>
+              </View>
+            )}
+
+            <Text style={[styles.modalLabel, { color: colors.text }]}>Select Delivery Person:</Text>
+            <View style={[styles.pickerContainer, { borderColor: colors.border }]}>
+              <Picker
+                selectedValue={selectedDeliveryPerson}
+                onValueChange={(itemValue) => setSelectedDeliveryPerson(itemValue)}
+                style={[styles.picker, { color: colors.text }]}
+                dropdownIconColor={colors.primary}
+              >
+                <Picker.Item label="Choose delivery person..." value={null} />
+                {deliveryPersons.map((person) => (
+                  <Picker.Item
+                    key={person.user_id}
+                    label={`${person.name} (${person.phone || 'No phone'})`}
+                    value={person.user_id}
+                  />
+                ))}
+              </Picker>
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancelButton, { borderColor: colors.border }]}
+                onPress={() => setShowDeliveryModal(false)}
+              >
+                <Text style={[styles.modalButtonText, { color: colors.text }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalButton,
+                  styles.modalAssignButton,
+                  { backgroundColor: selectedDeliveryPerson ? colors.primary : colors.surface }
+                ]}
+                onPress={handleAssignDelivery}
+                disabled={!selectedDeliveryPerson}
+              >
+                <Text style={[
+                  styles.modalButtonText,
+                  { color: selectedDeliveryPerson ? colors.background : colors.textSecondary }
+                ]}>
+                  Assign Delivery
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <TouchableOpacity
         style={[styles.backButton, { backgroundColor: colors.primary }]}
@@ -215,10 +354,19 @@ const styles = StyleSheet.create({
     fontSize: Theme.typography.fontSize.sm,
     marginBottom: Theme.spacing.xs,
   },
+  orderDetails: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Theme.spacing.xs,
+  },
+  orderType: {
+    fontSize: Theme.typography.fontSize.sm,
+    fontWeight: Theme.typography.fontWeight.medium,
+  },
   orderTotal: {
     fontSize: Theme.typography.fontSize.md,
     fontWeight: Theme.typography.fontWeight.bold,
-    marginBottom: Theme.spacing.xs,
   },
   orderItems: {
     fontSize: Theme.typography.fontSize.sm,
@@ -253,6 +401,72 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: Theme.spacing.md,
     fontSize: Theme.typography.fontSize.md,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '90%',
+    maxHeight: '70%',
+    borderRadius: Theme.borderRadius.lg,
+    elevation: 5,
+    padding: Theme.spacing.lg,
+  },
+  modalTitle: {
+    fontSize: Theme.typography.fontSize.xl,
+    fontWeight: Theme.typography.fontWeight.bold,
+    marginBottom: Theme.spacing.lg,
+    textAlign: 'center',
+  },
+  modalOrderInfo: {
+    backgroundColor: Theme.colors.surface,
+    padding: Theme.spacing.md,
+    borderRadius: Theme.borderRadius.md,
+    marginBottom: Theme.spacing.lg,
+  },
+  modalOrderText: {
+    fontSize: Theme.typography.fontSize.md,
+    marginBottom: Theme.spacing.xs,
+  },
+  modalLabel: {
+    fontSize: Theme.typography.fontSize.md,
+    fontWeight: Theme.typography.fontWeight.medium,
+    marginBottom: Theme.spacing.sm,
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderRadius: Theme.borderRadius.md,
+    backgroundColor: Theme.colors.surface,
+    marginBottom: Theme.spacing.lg,
+  },
+  picker: {
+    height: 50,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  modalButton: {
+    flex: 1,
+    padding: Theme.spacing.md,
+    borderRadius: Theme.borderRadius.md,
+    alignItems: 'center',
+    marginHorizontal: Theme.spacing.sm,
+  },
+  modalCancelButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+  },
+  modalAssignButton: {
+    // backgroundColor set in component
+  },
+  modalButtonText: {
+    fontSize: Theme.typography.fontSize.md,
+    fontWeight: Theme.typography.fontWeight.medium,
   },
 });
 

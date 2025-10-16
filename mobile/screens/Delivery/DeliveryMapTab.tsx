@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Alert } from 'react-native';
-import MapView, { Marker, Callout } from 'react-native-maps';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Dimensions } from 'react-native';
 import { Theme } from '../../lib/colors';
+import { Ionicons } from '@expo/vector-icons';
 import { getAvailableDeliveries, Order } from '../../lib/api/orderApi';
 
 interface DeliveryMapTabProps {
@@ -10,117 +10,148 @@ interface DeliveryMapTabProps {
 }
 
 const DeliveryMapTab: React.FC<DeliveryMapTabProps> = ({ navigation, user }) => {
-  const [deliveries, setDeliveries] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [availableDeliveries, setAvailableDeliveries] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedDelivery, setSelectedDelivery] = useState<Order | null>(null);
   const { colors, spacing, borderRadius, typography } = Theme;
 
   useEffect(() => {
-    loadDeliveries();
+    loadAvailableDeliveries();
   }, []);
 
-  const loadDeliveries = async () => {
+  const loadAvailableDeliveries = async () => {
+    setLoading(true);
     try {
       const data = await getAvailableDeliveries();
-      setDeliveries(data);
+      setAvailableDeliveries(data || []);
     } catch (error) {
+      console.log('Failed to load available deliveries:', error);
       Alert.alert('Error', 'Failed to load deliveries');
     } finally {
       setLoading(false);
     }
   };
 
-  const getDeliveryColor = (status: string) => {
-    switch (status) {
-      case 'ready': return colors.warning;
-      case 'delivering': return colors.primary;
-      case 'delivered': return colors.success;
-      default: return colors.error;
-    }
-  };
-
-  const getDeliveryIcon = (status: string) => {
-    switch (status) {
-      case 'ready': return '📦';
-      case 'delivering': return '🚚';
-      case 'delivered': return '✅';
-      default: return '❌';
-    }
-  };
-
-  if (loading) {
-    return (
-      <View style={[styles.container, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={[styles.loadingText, { color: colors.text }]}>Loading deliveries...</Text>
-      </View>
+  const handleAcceptDelivery = (order: Order) => {
+    Alert.alert(
+      'Accept Delivery',
+      `Accept delivery for Order #${order.id}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Accept',
+          onPress: () => {
+            // Navigate back to deliveries tab and trigger accept
+            navigation.goBack();
+            // The accept logic will be handled in the main dashboard
+          }
+        }
+      ]
     );
-  }
+  };
+
+  const renderDeliveryMarker = (order: Order, index: number) => (
+    <TouchableOpacity
+      key={order.id}
+      style={[
+        styles.marker,
+        {
+          backgroundColor: selectedDelivery?.id === order.id ? colors.primary : colors.warning,
+          left: `${20 + (index * 15)}%`,
+          top: `${30 + (index * 10)}%`,
+        }
+      ]}
+      onPress={() => setSelectedDelivery(order)}
+    >
+      <Ionicons name="location" size={24} color={colors.background} />
+      <Text style={[styles.markerText, { color: colors.background }]}>
+        {order.id}
+      </Text>
+    </TouchableOpacity>
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Text style={[styles.title, { color: colors.text }]}>Delivery Map</Text>
 
-      <MapView
-        style={styles.map}
-        initialRegion={{
-          latitude: -1.2864, // Kigali coordinates as default
-          longitude: 36.8172,
-          latitudeDelta: 0.0922,
-          longitudeDelta: 0.0421,
-        }}
-        showsUserLocation={true}
-        showsMyLocationButton={true}
-      >
-        {deliveries.map((delivery, index) => (
-          <Marker
-            key={delivery.id}
-            coordinate={{
-              latitude: -1.2864 + (index * 0.01), // Spread markers slightly for demo
-              longitude: 36.8172 + (index * 0.01),
-            }}
-            pinColor={getDeliveryColor(delivery.status)}
-          >
-            <Callout>
-              <View style={styles.callout}>
-                <Text style={[styles.calloutTitle, { color: colors.text }]}>
-                  {getDeliveryIcon(delivery.status)} Order #{delivery.id}
-                </Text>
-                <Text style={[styles.calloutSubtitle, { color: colors.textSecondary }]}>
-                  {delivery.restaurant.name}
-                </Text>
-                <Text style={[styles.calloutInfo, { color: colors.textSecondary }]}>
-                  Location: {delivery.restaurant.location || 'Not specified'}
-                </Text>
-                <Text style={[styles.calloutInfo, { color: colors.textSecondary }]}>
-                  Customer: {delivery.customer?.name}
-                </Text>
-                <Text style={[styles.calloutInfo, { color: colors.primary }]}>
-                  ${delivery.total_price}
-                </Text>
-                <Text style={[styles.calloutStatus, {
-                  color: getDeliveryColor(delivery.status),
-                  backgroundColor: getDeliveryColor(delivery.status) + '20'
-                }]}>
-                  {delivery.status}
-                </Text>
-              </View>
-            </Callout>
-          </Marker>
-        ))}
-      </MapView>
+      {/* Map Container (Simplified representation) */}
+      <View style={[styles.mapContainer, { backgroundColor: colors.surface }]}>
+        <Text style={[styles.mapPlaceholder, { color: colors.textSecondary }]}>
+          🗺️ Interactive Map View
+        </Text>
+        <Text style={[styles.mapSubtext, { color: colors.textSecondary }]}>
+          Real map integration would go here
+        </Text>
 
-      <View style={styles.legend}>
-        <View style={styles.legendItem}>
-          <Text style={styles.legendIcon}>📦</Text>
-          <Text style={[styles.legendText, { color: colors.textSecondary }]}>Ready</Text>
+        {/* Simulated delivery markers */}
+        {availableDeliveries.slice(0, 4).map((order, index) => renderDeliveryMarker(order, index))}
+
+        {/* Current location marker */}
+        <View style={[styles.currentLocation, { backgroundColor: colors.primary }]}>
+          <Ionicons name="navigate" size={20} color={colors.background} />
         </View>
-        <View style={styles.legendItem}>
-          <Text style={styles.legendIcon}>🚚</Text>
-          <Text style={[styles.legendText, { color: colors.textSecondary }]}>Delivering</Text>
+      </View>
+
+      {/* Delivery Details */}
+      {selectedDelivery && (
+        <View style={[styles.deliveryDetails, { backgroundColor: colors.surface }]}>
+          <View style={styles.deliveryHeader}>
+            <Text style={[styles.deliveryTitle, { color: colors.text }]}>
+              Order #{selectedDelivery.id}
+            </Text>
+            <TouchableOpacity onPress={() => setSelectedDelivery(null)}>
+              <Ionicons name="close" size={24} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={[styles.deliveryInfo, { color: colors.textSecondary }]}>
+            Customer: {selectedDelivery.customer?.name || 'N/A'}
+          </Text>
+          <Text style={[styles.deliveryInfo, { color: colors.textSecondary }]}>
+            Restaurant: {selectedDelivery.restaurant?.name || 'N/A'}
+          </Text>
+          <Text style={[styles.deliveryAmount, { color: colors.primary }]}>
+            ${typeof selectedDelivery.total_price === 'number' ?
+              selectedDelivery.total_price.toFixed(2) :
+              parseFloat(selectedDelivery.total_price || '0').toFixed(2)}
+          </Text>
+
+          <TouchableOpacity
+            style={[styles.acceptButton, { backgroundColor: colors.primary }]}
+            onPress={() => handleAcceptDelivery(selectedDelivery)}
+          >
+            <Ionicons name="checkmark-circle" size={20} color={colors.background} />
+            <Text style={[styles.acceptButtonText, { color: colors.background }]}>
+              Accept Delivery
+            </Text>
+          </TouchableOpacity>
         </View>
-        <View style={styles.legendItem}>
-          <Text style={styles.legendIcon}>✅</Text>
-          <Text style={[styles.legendText, { color: colors.textSecondary }]}>Delivered</Text>
-        </View>
+      )}
+
+      {/* Available Deliveries List */}
+      <View style={styles.deliveriesList}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          Available Deliveries ({availableDeliveries.length})
+        </Text>
+        {availableDeliveries.slice(0, 3).map((order) => (
+          <TouchableOpacity
+            key={order.id}
+            style={[styles.deliveryItem, { backgroundColor: colors.surface }]}
+            onPress={() => setSelectedDelivery(order)}
+          >
+            <View style={styles.deliveryItemLeft}>
+              <Text style={[styles.deliveryItemTitle, { color: colors.text }]}>
+                Order #{order.id}
+              </Text>
+              <Text style={[styles.deliveryItemSubtitle, { color: colors.textSecondary }]}>
+                {order.restaurant?.name || 'Restaurant'} • ${typeof order.total_price === 'number' ?
+                  order.total_price.toFixed(2) :
+                  parseFloat(order.total_price || '0').toFixed(2)}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
+        ))}
       </View>
     </View>
   );
@@ -135,61 +166,139 @@ const styles = StyleSheet.create({
     fontSize: Theme.typography.fontSize.xl,
     fontWeight: Theme.typography.fontWeight.bold,
     textAlign: 'center',
-    marginBottom: Theme.spacing.md,
+    marginBottom: Theme.spacing.lg,
   },
-  map: {
-    flex: 1,
-    borderRadius: Theme.borderRadius.md,
-    marginBottom: Theme.spacing.md,
-  },
-  callout: {
-    width: 200,
-    padding: Theme.spacing.sm,
-  },
-  calloutTitle: {
-    fontSize: Theme.typography.fontSize.md,
-    fontWeight: Theme.typography.fontWeight.bold,
-    marginBottom: Theme.spacing.xs,
-  },
-  calloutSubtitle: {
-    fontSize: Theme.typography.fontSize.sm,
-    marginBottom: Theme.spacing.xs,
-  },
-  calloutInfo: {
-    fontSize: Theme.typography.fontSize.sm,
-    marginBottom: Theme.spacing.xs,
-  },
-  calloutStatus: {
-    fontSize: Theme.typography.fontSize.xs,
-    fontWeight: Theme.typography.fontWeight.medium,
-    paddingHorizontal: Theme.spacing.xs,
-    paddingVertical: Theme.spacing.xs,
-    borderRadius: Theme.borderRadius.sm,
-    textTransform: 'uppercase',
-    alignSelf: 'flex-start',
-  },
-  legend: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    padding: Theme.spacing.md,
-    backgroundColor: Theme.colors.surface,
-    borderRadius: Theme.borderRadius.md,
-    borderWidth: 1,
-    borderColor: Theme.colors.border,
-  },
-  legendItem: {
+  mapContainer: {
+    height: 300,
+    borderRadius: Theme.borderRadius.lg,
+    marginBottom: Theme.spacing.lg,
+    justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  legendIcon: {
+  mapPlaceholder: {
+    fontSize: Theme.typography.fontSize.xl,
+    textAlign: 'center',
+  },
+  mapSubtext: {
+    fontSize: Theme.typography.fontSize.sm,
+    textAlign: 'center',
+    marginTop: Theme.spacing.sm,
+  },
+  marker: {
+    position: 'absolute',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  markerText: {
+    fontSize: Theme.typography.fontSize.xs,
+    fontWeight: Theme.typography.fontWeight.bold,
+  },
+  currentLocation: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  deliveryDetails: {
+    padding: Theme.spacing.lg,
+    borderRadius: Theme.borderRadius.lg,
+    marginBottom: Theme.spacing.lg,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  deliveryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Theme.spacing.md,
+  },
+  deliveryTitle: {
     fontSize: Theme.typography.fontSize.lg,
+    fontWeight: Theme.typography.fontWeight.bold,
+  },
+  deliveryInfo: {
+    fontSize: Theme.typography.fontSize.sm,
     marginBottom: Theme.spacing.xs,
   },
-  legendText: {
-    fontSize: Theme.typography.fontSize.sm,
+  deliveryAmount: {
+    fontSize: Theme.typography.fontSize.lg,
+    fontWeight: Theme.typography.fontWeight.bold,
+    marginBottom: Theme.spacing.md,
+  },
+  acceptButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Theme.spacing.md,
+    borderRadius: Theme.borderRadius.md,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  acceptButtonText: {
+    fontSize: Theme.typography.fontSize.md,
+    fontWeight: Theme.typography.fontWeight.medium,
+    marginLeft: Theme.spacing.sm,
+  },
+  deliveriesList: {
+    flex: 1,
+  },
+  sectionTitle: {
+    fontSize: Theme.typography.fontSize.lg,
+    fontWeight: Theme.typography.fontWeight.bold,
+    marginBottom: Theme.spacing.md,
+  },
+  deliveryItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: Theme.spacing.md,
+    borderRadius: Theme.borderRadius.md,
+    marginBottom: Theme.spacing.sm,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  deliveryItemLeft: {
+    flex: 1,
+  },
+  deliveryItemTitle: {
+    fontSize: Theme.typography.fontSize.md,
     fontWeight: Theme.typography.fontWeight.medium,
   },
-  loadingText: {
-    fontSize: Theme.typography.fontSize.md,
+  deliveryItemSubtitle: {
+    fontSize: Theme.typography.fontSize.sm,
+    marginTop: Theme.spacing.xs,
   },
 });
 

@@ -7,15 +7,20 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Image,
+  Dimensions,
 } from 'react-native';
 import { Theme } from '../../lib/colors';
 import { getOwnerRestaurants, deleteRestaurant, updateRestaurant, Restaurant } from '../../lib/api/restaurantApi';
+import { useAuth } from '../../lib/AuthContext';
+import { Ionicons } from '@expo/vector-icons';
 
 interface ViewRestaurantsProps {
   navigation: any;
 }
 
 const ViewRestaurants: React.FC<ViewRestaurantsProps> = ({ navigation }) => {
+  const { user } = useAuth();
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
   const { colors, spacing, borderRadius, typography } = Theme;
@@ -25,10 +30,14 @@ const ViewRestaurants: React.FC<ViewRestaurantsProps> = ({ navigation }) => {
   }, []);
 
   const loadRestaurants = async () => {
+    if (!user?.id) {
+      Alert.alert('Error', 'User not authenticated');
+      setLoading(false);
+      return;
+    }
+
     try {
-      // For now, use hardcoded owner ID (manager user)
-      // TODO: Get from user context
-      const data = await getOwnerRestaurants(2);
+      const data = await getOwnerRestaurants(user.id);
       setRestaurants(data);
     } catch (error) {
       Alert.alert('Error', 'Failed to load restaurants');
@@ -105,37 +114,52 @@ const ViewRestaurants: React.FC<ViewRestaurantsProps> = ({ navigation }) => {
         </View>
       ) : (
         restaurants.map((restaurant) => (
-          <View key={restaurant.id} style={[styles.restaurantCard, { backgroundColor: colors.surface }]}>
-           <View style={styles.restaurantInfo}>
-             <View style={styles.restaurantHeader}>
-               <Text style={[styles.restaurantName, { color: colors.text }]}>{restaurant.name}</Text>
-               <View style={styles.statusBadges}>
-                 <Text style={[styles.approvalStatus, {
-                   color: restaurant.approved ? colors.success : colors.warning,
-                   backgroundColor: restaurant.approved ? colors.success + '20' : colors.warning + '20'
-                 }]}>
-                   {restaurant.approved ? 'Approved' : 'Pending'}
-                 </Text>
-               </View>
-             </View>
-             <Text style={[styles.restaurantLocation, { color: colors.textSecondary }]}>
-               📍 {restaurant.location}
-             </Text>
-             <Text style={[styles.restaurantContact, { color: colors.textSecondary }]}>
-               📞 {restaurant.contact_info || 'No contact info'}
-             </Text>
-             <View style={styles.restaurantStats}>
-               <Text style={[styles.statText, { color: colors.primary }]}>
-                 📊 Orders: {restaurant._count?.orders || 0}
-               </Text>
-               <Text style={[styles.restaurantStatus, {
-                 color: restaurant.status === 'open' ? colors.success : colors.error
-               }]}>
-                 {restaurant.status === 'open' ? '🟢 Open' : '🔴 Closed'}
-               </Text>
-             </View>
-           </View>
-            <View style={styles.actions}>
+          <View key={restaurant.id} style={styles.restaurantCard}>
+            <Image
+              source={restaurant.image ? { uri: restaurant.image } : require('../../assets/icon.png')}
+              style={styles.restaurantImage}
+              resizeMode="cover"
+              onError={(error) => {
+                console.warn('Image load error for restaurant:', restaurant.id, error.nativeEvent.error);
+              }}
+            />
+            <View style={styles.restaurantContent}>
+              <View style={styles.restaurantInfo}>
+                <View style={styles.restaurantHeader}>
+                  <Text style={[styles.restaurantName, { color: colors.text }]}>{restaurant.name}</Text>
+                  <View style={styles.statusBadges}>
+                    <Text style={[styles.approvalStatus, {
+                      color: restaurant.approved ? colors.success : colors.warning,
+                      backgroundColor: restaurant.approved ? colors.success + '20' : colors.warning + '20'
+                    }]}>
+                      {restaurant.approved ? 'Approved' : 'Pending'}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={[styles.restaurantLocation, { color: colors.textSecondary }]}>
+                  <Ionicons name="location" size={16} color={colors.textSecondary} /> {restaurant.location || 'Location not specified'}
+                </Text>
+                <Text style={[styles.restaurantContact, { color: colors.textSecondary }]}>
+                  <Ionicons name="call" size={16} color={colors.textSecondary} /> {restaurant.contact_info || 'No contact info'}
+                </Text>
+                {restaurant.latitude && restaurant.longitude && (
+                  <Text style={[styles.restaurantCoordinates, { color: colors.textSecondary }]}>
+                    <Ionicons name="navigate" size={16} color={colors.textSecondary} /> {parseFloat(restaurant.latitude).toFixed(4)}, {parseFloat(restaurant.longitude).toFixed(4)}
+                  </Text>
+                )}
+                <View style={styles.restaurantStats}>
+                  <Text style={[styles.statText, { color: colors.primary }]}>
+                    <Ionicons name="stats-chart" size={16} color={colors.primary} /> Orders: {restaurant._count?.orders || 0}
+                  </Text>
+                  <Text style={[styles.restaurantStatus, {
+                    color: restaurant.status === 'open' ? colors.success : colors.error
+                  }]}>
+                    {restaurant.status === 'open' ? '🟢 Open' : '🔴 Closed'}
+                  </Text>
+                </View>
+                </View>
+              </View>
+              <View style={styles.actions}>
               <TouchableOpacity
                 style={[styles.actionButton, { backgroundColor: colors.primary }]}
                 onPress={() => handleEditRestaurant(restaurant)}
@@ -195,10 +219,25 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   restaurantCard: {
-    padding: Theme.spacing.lg,
     marginBottom: Theme.spacing.md,
     borderRadius: Theme.borderRadius.lg,
-    elevation: 2,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    overflow: 'hidden',
+    backgroundColor: Theme.colors.surface,
+  },
+  restaurantImage: {
+    width: '100%',
+    height: 150,
+    backgroundColor: Theme.colors.surface,
+    borderTopLeftRadius: Theme.borderRadius.lg,
+    borderTopRightRadius: Theme.borderRadius.lg,
+  },
+  restaurantContent: {
+    padding: Theme.spacing.lg,
   },
   restaurantInfo: {
     marginBottom: Theme.spacing.md,
@@ -207,7 +246,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: Theme.spacing.xs,
+    marginBottom: Theme.spacing.sm,
   },
   restaurantName: {
     fontSize: Theme.typography.fontSize.lg,
@@ -228,10 +267,20 @@ const styles = StyleSheet.create({
   restaurantLocation: {
     fontSize: Theme.typography.fontSize.md,
     marginBottom: Theme.spacing.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   restaurantContact: {
     fontSize: Theme.typography.fontSize.sm,
     marginBottom: Theme.spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  restaurantCoordinates: {
+    fontSize: Theme.typography.fontSize.sm,
+    marginBottom: Theme.spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   restaurantStats: {
     flexDirection: 'row',
@@ -241,6 +290,8 @@ const styles = StyleSheet.create({
   statText: {
     fontSize: Theme.typography.fontSize.sm,
     fontWeight: Theme.typography.fontWeight.medium,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   restaurantStatus: {
     fontSize: Theme.typography.fontSize.sm,

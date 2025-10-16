@@ -45,6 +45,8 @@ export interface Order {
     name: string;
     location?: string;
     contact_info?: string;
+    latitude?: string;
+    longitude?: string;
     owner?: {
       name: string;
       email: string;
@@ -55,6 +57,8 @@ export interface Order {
   deliveries?: Array<{
     delivery_id: number;
     status: 'pending' | 'on_route' | 'delivered';
+    latitude?: number;
+    longitude?: number;
     delivery_person?: {
       user_id: number;
       name: string;

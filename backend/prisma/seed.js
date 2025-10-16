@@ -112,7 +112,89 @@ async function main() {
     data: menuItems,
   });
 
-  console.log("✅ Users, restaurants, and menu items seeded successfully!");
+  // Seed sample orders for the customer
+  const orders = [
+    {
+      customer_id: 4, // customer user
+      restaurant_id: 1, // Pizza Palace
+      total_price: 34.98,
+      status: "delivered",
+      order_type: "delivery",
+      order_time: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+    },
+    {
+      customer_id: 4,
+      restaurant_id: 2, // Burger Joint
+      total_price: 27.98,
+      status: "delivered",
+      order_type: "pickup",
+      order_time: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
+    },
+    {
+      customer_id: 4,
+      restaurant_id: 1,
+      total_price: 18.99,
+      status: "preparing",
+      order_type: "delivery",
+      order_time: new Date(Date.now() - 30 * 60 * 1000), // 30 minutes ago
+    },
+  ];
+
+  const createdOrders = await prisma.order.createMany({
+    data: orders,
+  });
+
+  // Seed order items
+  const orderItems = [
+    {
+      order_id: 1,
+      item_id: 1, // Margherita Pizza
+      quantity: 1,
+      preferences: "Extra cheese please",
+    },
+    {
+      order_id: 1,
+      item_id: 2, // Pepperoni Pizza
+      quantity: 1,
+    },
+    {
+      order_id: 2,
+      item_id: 3, // Classic Burger
+      quantity: 1,
+    },
+    {
+      order_id: 2,
+      item_id: 4, // Chicken Burger
+      quantity: 1,
+    },
+    {
+      order_id: 3,
+      item_id: 2, // Pepperoni Pizza
+      quantity: 1,
+      preferences: "No onions",
+    },
+  ];
+
+  await prisma.orderItem.createMany({
+    data: orderItems,
+  });
+
+  // Seed delivery for active order
+  const deliveries = [
+    {
+      order_id: 3,
+      delivery_person_id: 3, // delivery user
+      status: "on_route",
+      latitude: -1.9441,
+      longitude: 30.0619,
+    },
+  ];
+
+  await prisma.delivery.createMany({
+    data: deliveries,
+  });
+
+  console.log("✅ Users, restaurants, menu items, and sample orders seeded successfully!");
 }
 
 main()

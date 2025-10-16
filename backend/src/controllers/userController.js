@@ -122,6 +122,15 @@ export const updateProfile = async (req, res) => {
     const userId = req.user.id; // Assuming auth middleware
     const { name, email, phone } = req.body;
 
+    // Validate required fields
+    if (!name || name.trim() === '') {
+      return res.status(400).json({ error: "Name is required" });
+    }
+
+    if (!email || email.trim() === '') {
+      return res.status(400).json({ error: "Email is required" });
+    }
+
     // Check if email is already taken by another user
     if (email) {
       const existingUser = await prisma.user.findUnique({
@@ -136,7 +145,11 @@ export const updateProfile = async (req, res) => {
     // Update profile
     const updatedUser = await prisma.user.update({
       where: { user_id: userId },
-      data: { name, email, phone },
+      data: {
+        name: name.trim(),
+        email: email.trim(),
+        phone: phone ? phone.trim() : null
+      },
       select: {
         user_id: true,
         name: true,
@@ -147,8 +160,20 @@ export const updateProfile = async (req, res) => {
       },
     });
 
-    res.json({ message: "Profile updated successfully", user: updatedUser });
+    // Generate new JWT token with updated user info
+    const token = jwt.sign(
+      { id: updatedUser.user_id, role: updatedUser.role, email: updatedUser.email },
+      process.env.JWT_SECRET || "supersecretkey",
+      { expiresIn: "1h" }
+    );
+
+    res.json({
+      message: "Profile updated successfully",
+      user: updatedUser,
+      token: token
+    });
   } catch (error) {
+    console.error('Update profile error:', error);
     res.status(500).json({ error: "Failed to update profile" });
   }
 };
@@ -158,6 +183,15 @@ export const changePassword = async (req, res) => {
   try {
     const userId = req.user.id; // Assuming auth middleware
     const { currentPassword, newPassword } = req.body;
+
+    // Validate input
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: "Current password and new password are required" });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: "New password must be at least 6 characters long" });
+    }
 
     // Get current user
     const user = await prisma.user.findUnique({
@@ -174,6 +208,12 @@ export const changePassword = async (req, res) => {
       return res.status(400).json({ error: "Current password is incorrect" });
     }
 
+    // Check if new password is different from current
+    const isSamePassword = await bcrypt.compare(newPassword, user.password);
+    if (isSamePassword) {
+      return res.status(400).json({ error: "New password must be different from current password" });
+    }
+
     // Hash new password
     const hashedNewPassword = await bcrypt.hash(newPassword, 10);
 
@@ -185,6 +225,7 @@ export const changePassword = async (req, res) => {
 
     res.json({ message: "Password changed successfully" });
   } catch (error) {
+    console.error('Change password error:', error);
     res.status(500).json({ error: "Failed to change password" });
   }
 };
