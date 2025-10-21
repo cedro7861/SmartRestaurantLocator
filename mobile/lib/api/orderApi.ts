@@ -73,8 +73,15 @@ export const getCustomerOrders = async (): Promise<Order[]> => {
 };
 
 export const getOwnerOrders = async (): Promise<Order[]> => {
-  const response = await api.get('/orders/owner');
-  return response.data;
+  try {
+    console.log('Making API call to get owner orders...');
+    const response = await api.get('/orders/owner');
+    console.log('API response received:', response.data);
+    return response.data || [];
+  } catch (error) {
+    console.error('API call failed:', error);
+    throw error;
+  }
 };
 
 export const createOrder = async (data: {
@@ -100,8 +107,8 @@ export const getAllOrders = async (): Promise<Order[]> => {
   return response.data;
 };
 
-export const getAvailableDeliveries = async (): Promise<Order[]> => {
-  const response = await api.get('/orders/delivery/available');
+export const getOwnerReadyOrders = async (): Promise<Order[]> => {
+  const response = await api.get('/orders/owner/ready');
   return response.data;
 };
 

@@ -3,6 +3,7 @@ import { authenticateToken, requireRole } from "../middleware/auth.js";
 import {
   getCustomerOrders,
   getOwnerOrders,
+  getOwnerReadyOrders,
   getAllOrders,
   getAvailableDeliveries,
   getDeliveryHistory,
@@ -18,6 +19,7 @@ router.post("/", authenticateToken, createOrder);
 
 // Owner routes
 router.get("/owner", authenticateToken, requireRole(['owner']), getOwnerOrders);
+router.get("/owner/ready", authenticateToken, requireRole(['owner']), getOwnerReadyOrders);
 router.put("/:id/status", authenticateToken, requireRole(['owner']), updateOrderStatus);
 
 // Admin routes

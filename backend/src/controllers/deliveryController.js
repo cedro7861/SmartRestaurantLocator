@@ -6,17 +6,27 @@ const prisma = new PrismaClient();
 export const assignDelivery = async (req, res) => {
   try {
     const { order_id, delivery_person_id } = req.body;
-    console.log('Assigning delivery - Order ID:', order_id, 'Delivery Person ID:', delivery_person_id);
+    const ownerId = req.user?.id;
+    console.log('Assigning delivery - Order ID:', order_id, 'Delivery Person ID:', delivery_person_id, 'Owner ID:', ownerId);
 
     // Check if order exists and is ready for delivery
     const order = await prisma.order.findUnique({
       where: { id: Number(order_id) },
-      include: { deliveries: true }
+      include: {
+        deliveries: true,
+        restaurant: true
+      }
     });
 
     if (!order) {
       console.log('Order not found:', order_id);
       return res.status(404).json({ error: "Order not found" });
+    }
+
+    // Check if the owner owns this restaurant
+    if (order.restaurant.owner_id !== ownerId) {
+      console.log('Owner does not own this restaurant:', order.restaurant.owner_id, 'vs', ownerId);
+      return res.status(403).json({ error: "You can only assign deliveries for your own restaurants" });
     }
 
     if (order.status !== 'ready') {
@@ -112,6 +122,11 @@ export const reassignDelivery = async (req, res) => {
 export const getAvailableDeliveryPersons = async (req, res) => {
   try {
     console.log('Fetching available delivery persons for user role:', req.user.role);
+
+    // Check if user is owner or admin
+    if (!req.user || (req.user.role !== 'owner' && req.user.role !== 'admin')) {
+      return res.status(403).json({ error: "Access denied. Only owners and admins can view delivery persons." });
+    }
 
     const deliveryPersons = await prisma.user.findMany({
       where: {

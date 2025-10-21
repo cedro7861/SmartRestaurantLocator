@@ -8,21 +8,18 @@ import {
   getAllDeliveries,
   getOwnerDeliveries
 } from '../controllers/deliveryController.js';
-import { authenticateToken } from '../middleware/auth.js';
+import { authenticateToken, requireRole } from '../middleware/auth.js';
 
 const router = express.Router();
 
 // 📌 Assign delivery person to order (Owner only)
-router.post('/assign', authenticateToken, assignDelivery);
+router.post('/assign', authenticateToken, requireRole(['owner']), assignDelivery);
 
 // 📌 Reassign delivery person to order (Owner only)
-router.post('/reassign', authenticateToken, reassignDelivery);
-
-// 📌 Reassign delivery person to order (Owner/Admin only)
-router.post('/reassign', authenticateToken, reassignDelivery);
+router.post('/reassign', authenticateToken, requireRole(['owner']), reassignDelivery);
 
 // 📌 Get available delivery persons (Owner/Admin)
-router.get('/persons/available', authenticateToken, getAvailableDeliveryPersons);
+router.get('/persons/available', authenticateToken, requireRole(['owner', 'admin']), getAvailableDeliveryPersons);
 
 // 📌 Update delivery status (Delivery person)
 router.put('/:id/status', authenticateToken, updateDeliveryStatus);

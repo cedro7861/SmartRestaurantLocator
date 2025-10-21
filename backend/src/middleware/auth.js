@@ -13,10 +13,17 @@ export const authenticateToken = async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'supersecretkey');
-    const user = await prisma.user.findUnique({
-      where: { user_id: decoded.id }
-    });
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'supersecretkey', { ignoreNotBefore: true, clockTolerance: 300 }); // ignore iat check
+    let user;
+    if (decoded.id) {
+      user = await prisma.user.findUnique({
+        where: { user_id: decoded.id }
+      });
+    } else if (decoded.email) {
+      user = await prisma.user.findUnique({
+        where: { email: decoded.email }
+      });
+    }
 
     if (!user) {
       return res.status(401).json({ error: 'User not found' });

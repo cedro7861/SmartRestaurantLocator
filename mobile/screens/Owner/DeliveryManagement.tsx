@@ -4,7 +4,7 @@ import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { Theme } from '../../lib/colors';
 import { getOwnerDeliveries, assignDelivery, reassignDelivery, DeliveryPerson, Delivery, getAvailableDeliveryPersons } from '../../lib/api/deliveryApi';
-import { getAvailableDeliveries, Order } from '../../lib/api/orderApi';
+import { getOwnerReadyOrders, Order } from '../../lib/api/orderApi';
 
 interface DeliveryManagementProps {
   navigation: any;
@@ -48,7 +48,7 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ navigation, use
 
       const [deliveriesData, ordersData, personsData] = await Promise.all([
         getOwnerDeliveries(),
-        getAvailableDeliveries(),
+        getOwnerReadyOrders(),
         getAvailableDeliveryPersons()
       ]);
 

@@ -33,10 +33,15 @@ const OrdersTab: React.FC<OrdersTabProps> = ({ navigation }) => {
 
   const loadOrders = async () => {
     try {
+      console.log('Loading orders for owner...');
       const data = await getOwnerOrders();
-      setOrders(data);
+      console.log('Orders received:', data);
+      console.log('Orders array length:', data?.length || 0);
+      setOrders(data || []);
     } catch (error) {
+      console.error('Error loading orders:', error);
       Alert.alert('Error', 'Failed to load orders');
+      setOrders([]);
     } finally {
       setLoading(false);
     }
@@ -103,6 +108,9 @@ const OrdersTab: React.FC<OrdersTabProps> = ({ navigation }) => {
         <View style={styles.emptyContainer}>
           <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
             No orders found for your restaurants.
+          </Text>
+          <Text style={[styles.emptyText, { color: colors.textSecondary, fontSize: 12, marginTop: 8 }]}>
+            If you expect to see orders, please check your restaurant setup or contact support.
           </Text>
         </View>
       ) : (

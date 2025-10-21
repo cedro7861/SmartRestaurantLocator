@@ -87,6 +87,20 @@ export const getOwnerOrders = async (req, res) => {
       return res.status(401).json({ error: "Authentication required" });
     }
 
+    console.log('Fetching orders for owner ID:', ownerId);
+
+    // First, check if the owner has any restaurants
+    const restaurants = await prisma.restaurant.findMany({
+      where: { owner_id: ownerId },
+      select: { id: true, name: true }
+    });
+    console.log('Owner restaurants:', restaurants);
+
+    if (restaurants.length === 0) {
+      console.log('Owner has no restaurants, returning empty array');
+      return res.json([]);
+    }
+
     const orders = await prisma.order.findMany({
       where: {
         restaurant: {
@@ -138,7 +152,11 @@ export const getOwnerOrders = async (req, res) => {
       orderBy: { order_time: "desc" },
     });
 
-    return res.json(orders ?? []);
+    console.log('Found orders:', orders.length);
+    console.log('Orders data:', orders);
+
+    // Ensure we return an array even if no orders found
+    return res.json(orders || []);
   } catch (error) {
     console.error("Error fetching owner orders:", error);
     return res.status(500).json({
@@ -308,6 +326,69 @@ export const getAllOrders = async (req, res) => {
     return res.status(500).json({
       error: "Failed to fetch orders",
       message: "Unable to load system orders. Please try again later.",
+    });
+  }
+};
+
+// 📌 Get orders ready for delivery (for owners)
+export const getOwnerReadyOrders = async (req, res) => {
+  try {
+    const ownerId = req.user?.id;
+
+    if (!ownerId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    const orders = await prisma.order.findMany({
+      where: {
+        status: 'ready',
+        order_type: 'delivery',
+        restaurant: {
+          owner_id: ownerId
+        }
+      },
+      select: {
+        id: true,
+        customer_id: true,
+        restaurant_id: true,
+        total_price: true,
+        status: true,
+        order_type: true,
+        order_time: true,
+        customer: {
+          select: { name: true, email: true, phone: true }
+        },
+        restaurant: {
+          select: {
+            name: true,
+            location: true,
+            contact_info: true,
+            latitude: true,
+            longitude: true,
+            status: true,
+          },
+        },
+        order_items: {
+          select: {
+            id: true,
+            item_id: true,
+            quantity: true,
+            preferences: true,
+            item: {
+              select: { id: true, name: true, price: true, description: true }
+            },
+          },
+        },
+      },
+      orderBy: { order_time: 'asc' }
+    });
+
+    return res.json(orders ?? []);
+  } catch (error) {
+    console.error("Error fetching owner ready orders:", error);
+    return res.status(500).json({
+      error: "Failed to fetch ready orders",
+      message: "Unable to load orders ready for delivery. Please try again later.",
     });
   }
 };
