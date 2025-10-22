@@ -57,7 +57,7 @@ export const loginUser = async (req, res) => {
     const token = jwt.sign(
       { id: user.user_id, role: user.role, email: user.email },
       process.env.JWT_SECRET || "supersecretkey", // set JWT_SECRET in .env
-      { expiresIn: "1h" }
+      { expiresIn: "24h" }
     );
 
     res.json({
@@ -166,7 +166,7 @@ export const updateProfile = async (req, res) => {
     const token = jwt.sign(
       { id: updatedUser.user_id, role: updatedUser.role, email: updatedUser.email },
       process.env.JWT_SECRET || "supersecretkey",
-      { expiresIn: "1h" }
+      { expiresIn: "24h" }
     );
 
     res.json({
@@ -183,7 +183,7 @@ export const updateProfile = async (req, res) => {
 // 📌 Change password
 export const changePassword = async (req, res) => {
   try {
-    const userId = req.user.id; // Assuming auth middleware
+    const userId = req.user.id; // Authenticated user ID from middleware
     const { currentPassword, newPassword } = req.body;
 
     // Validate input
@@ -265,20 +265,24 @@ export const requestPasswordReset = async (req, res) => {
     // Always return success message for security (don't reveal if email exists)
     if (!user) {
       return res.json({
-        message: "If an account with this email exists, we have sent you a password reset link."
+        message: "If an account with this email exists, we have sent you a new password."
       });
     }
 
-    // Generate reset token
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    const resetTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    // Generate new random password
+    const newPassword = crypto.randomBytes(8).toString('hex'); // 16 character random password
 
-    // Store reset token in database (you might want to add a reset_token field to user table)
-    // For now, we'll create a simple in-memory solution or use a temporary field
-    // In production, you'd want to create a separate password_reset_tokens table
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update user's password in database
+    await prisma.user.update({
+      where: { user_id: user.user_id },
+      data: { password: hashedPassword },
+    });
 
     // Create email transporter
-    const transporter = nodemailer.createTransporter({
+    const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || 'smtp.gmail.com',
       port: process.env.SMTP_PORT || 587,
       secure: false,
@@ -289,20 +293,18 @@ export const requestPasswordReset = async (req, res) => {
     });
 
     // Email content
-    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
     const mailOptions = {
       from: process.env.SMTP_USER,
       to: email,
-      subject: 'Password Reset - Smart Restaurant Locator',
+      subject: 'New Password - Smart Restaurant Locator',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #4db6ac;">Password Reset Request</h2>
+          <h2 style="color: #4db6ac;">Password Reset</h2>
           <p>Hello ${user.name},</p>
           <p>You requested a password reset for your Smart Restaurant Locator account.</p>
-          <p>Please click the link below to reset your password:</p>
-          <a href="${resetUrl}" style="background-color: #4db6ac; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; margin: 16px 0;">Reset Password</a>
-          <p><strong>This link will expire in 24 hours.</strong></p>
-          <p>If you didn't request this password reset, please ignore this email.</p>
+          <p>Your new password is: <strong>${newPassword}</strong></p>
+          <p><strong>Please change this password after logging in for security reasons.</strong></p>
+          <p>If you didn't request this password reset, please contact our support team immediately.</p>
           <p>For security reasons, never share this email with anyone.</p>
           <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
           <p style="color: #666; font-size: 12px;">
@@ -317,7 +319,7 @@ export const requestPasswordReset = async (req, res) => {
     await transporter.sendMail(mailOptions);
 
     res.json({
-      message: "If an account with this email exists, we have sent you a password reset link."
+      message: "If an account with this email exists, we have sent you a new password."
     });
 
   } catch (error) {

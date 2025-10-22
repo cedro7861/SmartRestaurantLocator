@@ -15,7 +15,7 @@ import {
 const router = express.Router();
 
 router.get("/", authenticateToken, requireRole(['admin']), getUsers);
-router.get("/:id", authenticateToken, getUserById);
+router.get("/:id", authenticateToken, requireRole(['admin']), getUserById);
 router.post("/", createUser);
 router.put("/:id", authenticateToken, requireRole(['admin']), updateUser);
 router.delete("/:id", authenticateToken, requireRole(['admin']), deleteUser);
@@ -26,7 +26,7 @@ router.post("/login", loginUser);
 // 📌 Profile routes
 router.put("/profile", authenticateToken, updateProfile);
 
-// 📌 Change password route
+// 📌 Change password route (accessible to all authenticated users)
 router.put("/change-password", authenticateToken, changePassword);
 
 // 📌 Forgot password route

@@ -13,7 +13,7 @@ export const authenticateToken = async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'superSecretKey_ChangeThis123!', { ignoreNotBefore: true, clockTolerance: 300 }); // ignore iat check
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'supersecretkey', { ignoreNotBefore: true, clockTolerance: 300 }); // ignore iat check
     let user;
     if (decoded.id) {
       user = await prisma.user.findUnique({
