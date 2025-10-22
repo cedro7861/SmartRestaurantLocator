@@ -131,7 +131,7 @@ const RestaurantDetail: React.FC<RestaurantDetailProps> = ({ navigation, route }
             <View style={styles.menuItemContent}>
               <Text style={[styles.menuItemName, { color: colors.text }]}>{item.name}</Text>
               <Text style={[styles.menuItemDescription, { color: colors.textSecondary }]}>{item.description}</Text>
-              <Text style={[styles.menuItemPrice, { color: colors.primary }]}>${parseFloat(item.price.toString()).toFixed(2)}</Text>
+              <Text style={[styles.menuItemPrice, { color: colors.primary }]}>RWF {parseFloat(item.price.toString()).toFixed(2)}</Text>
             </View>
             <TouchableOpacity
               style={[styles.orderButton, { backgroundColor: colors.primary }]}
@@ -149,7 +149,7 @@ const RestaurantDetail: React.FC<RestaurantDetailProps> = ({ navigation, route }
       {cart.length > 0 && (
         <View style={[styles.cartSection, { backgroundColor: colors.surface }]}>
           <Text style={[styles.cartTitle, { color: colors.text }]}>Your Cart ({cart.length} items)</Text>
-          <Text style={[styles.cartTotal, { color: colors.primary }]}>Total: ${getTotalPrice().toFixed(2)}</Text>
+          <Text style={[styles.cartTotal, { color: colors.primary }]}>Total: RWF {getTotalPrice().toFixed(2)}</Text>
           <TouchableOpacity
             style={[styles.viewCartButton, { backgroundColor: colors.surface }]}
             onPress={() => setShowCart(!showCart)}
@@ -177,7 +177,7 @@ const RestaurantDetail: React.FC<RestaurantDetailProps> = ({ navigation, route }
                     ) : null}
                   </View>
                   <Text style={[styles.cartItemPrice, { color: colors.primary }]}>
-                    ${(parseFloat(cartItem.item.price.toString()) * cartItem.quantity).toFixed(2)}
+                    RWF {(parseFloat(cartItem.item.price.toString()) * cartItem.quantity).toFixed(2)}
                   </Text>
                 </View>
               ))}

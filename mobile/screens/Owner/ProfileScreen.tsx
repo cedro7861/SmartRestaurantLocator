@@ -35,18 +35,24 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       setEditForm({
         name: user.name || '',
         email: user.email || '',
-        phone: '',
+        phone: user.phone || '',
       });
     }
   }, [user]);
 
   const handleLogout = () => {
     Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
+      'Logout Confirmation',
+      'Are you sure you want to logout from your account?',
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Logout', style: 'destructive', onPress: logout },
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Yes, Logout',
+          style: 'destructive',
+          onPress: () => {
+            logout();
+          }
+        },
       ]
     );
   };
@@ -70,6 +76,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
       setIsEditing(false);
       Alert.alert('Success', 'Profile updated successfully');
+      // Navigate back after successful update
+      navigation.goBack();
     } catch (error: any) {
       Alert.alert('Error', error.response?.data?.error || 'Failed to update profile');
     } finally {
@@ -116,12 +124,25 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
-      <Text style={[styles.title, { color: colors.text }]}>Profile</Text>
+      <View style={styles.header}>
+        <View style={[styles.avatarContainer, { backgroundColor: colors.primary }]}>
+          <Text style={[styles.avatarText, { color: colors.background }]}>
+            {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+          </Text>
+        </View>
+        <Text style={[styles.title, { color: colors.text }]}>Manager Profile</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+          Manage your account information
+        </Text>
+      </View>
 
       <View style={styles.profileInfo}>
         <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
-          <View style={styles.cardHeader}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Name</Text>
+          <View style={styles.cardHeaderWithEdit}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Ionicons name="person" size={20} color={colors.primary} />
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Full Name</Text>
+            </View>
             {!isEditing && (
               <TouchableOpacity onPress={() => setIsEditing(true)}>
                 <Ionicons name="pencil" size={20} color={colors.primary} />
@@ -143,7 +164,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
         <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
           <View style={styles.cardHeader}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Email</Text>
+            <Ionicons name="mail" size={20} color={colors.primary} />
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Email Address</Text>
           </View>
           {isEditing ? (
             <TextInput
@@ -162,7 +184,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
         <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
           <View style={styles.cardHeader}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Phone</Text>
+            <Ionicons name="call" size={20} color={colors.primary} />
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Phone Number</Text>
           </View>
           {isEditing ? (
             <TextInput
@@ -174,18 +197,24 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
               keyboardType="phone-pad"
             />
           ) : (
-            <Text style={[styles.value, { color: colors.text }]}>{editForm.phone || 'Not set'}</Text>
+            <Text style={[styles.value, { color: colors.text }]}>{user?.phone || 'Not set'}</Text>
           )}
         </View>
 
         <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.label, { color: colors.textSecondary }]}>Role</Text>
+          <View style={styles.cardHeader}>
+            <Ionicons name="shield-checkmark" size={20} color={colors.primary} />
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Account Role</Text>
+          </View>
           <Text style={[styles.value, { color: colors.text }]}>{user?.role || 'N/A'}</Text>
         </View>
 
         <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.label, { color: colors.textSecondary }]}>Status</Text>
-          <Text style={[styles.value, { color: colors.text }]}>{user?.status || 'N/A'}</Text>
+          <View style={styles.cardHeader}>
+            <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Account Status</Text>
+          </View>
+          <Text style={[styles.value, { color: colors.success }]}>{user?.status || 'N/A'}</Text>
         </View>
       </View>
 
@@ -207,7 +236,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
               setEditForm({
                 name: user?.name || '',
                 email: user?.email || '',
-                phone: '',
+                phone: user?.phone || '',
               });
             }}
           >
@@ -216,7 +245,17 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         </View>
       )}
 
-      <View style={styles.actionButtons}>
+      <View style={styles.actionSection}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Account Actions</Text>
+
+        <TouchableOpacity
+          style={[styles.actionButton, { backgroundColor: colors.primary }]}
+          onPress={() => setIsEditing(true)}
+        >
+          <Ionicons name="create" size={20} color={colors.background} />
+          <Text style={[styles.actionButtonText, { color: colors.background }]}>Edit Profile</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity
           style={[styles.actionButton, { backgroundColor: colors.warning }]}
           onPress={() => setShowPasswordModal(true)}
@@ -308,11 +347,36 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: Theme.spacing.lg,
   },
+  header: {
+    alignItems: 'center',
+    marginBottom: Theme.spacing.xl,
+  },
+  avatarContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Theme.spacing.md,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  avatarText: {
+    fontSize: Theme.typography.fontSize.xl,
+    fontWeight: Theme.typography.fontWeight.bold,
+  },
   title: {
     fontSize: Theme.typography.fontSize.xl,
     fontWeight: Theme.typography.fontWeight.bold,
     textAlign: 'center',
-    marginBottom: Theme.spacing.xl,
+    marginBottom: Theme.spacing.xs,
+  },
+  subtitle: {
+    fontSize: Theme.typography.fontSize.md,
+    textAlign: 'center',
   },
   profileInfo: {
     flex: 1,
@@ -326,6 +390,11 @@ const styles = StyleSheet.create({
   },
   cardHeader: {
     flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Theme.spacing.xs,
+  },
+  cardHeaderWithEdit: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: Theme.spacing.xs,
@@ -333,6 +402,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: Theme.typography.fontSize.sm,
     fontWeight: Theme.typography.fontWeight.medium,
+    marginLeft: Theme.spacing.sm,
   },
   value: {
     fontSize: Theme.typography.fontSize.md,
@@ -372,8 +442,13 @@ const styles = StyleSheet.create({
     fontSize: Theme.typography.fontSize.md,
     fontWeight: Theme.typography.fontWeight.medium,
   },
-  actionButtons: {
+  actionSection: {
     marginTop: Theme.spacing.xl,
+  },
+  sectionTitle: {
+    fontSize: Theme.typography.fontSize.lg,
+    fontWeight: Theme.typography.fontWeight.bold,
+    marginBottom: Theme.spacing.md,
   },
   actionButton: {
     flexDirection: 'row',

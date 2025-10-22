@@ -111,7 +111,7 @@ const DeliveryMapTab: React.FC<DeliveryMapTabProps> = ({ navigation, user }) => 
             Restaurant: {selectedDelivery.restaurant?.name || 'N/A'}
           </Text>
           <Text style={[styles.deliveryAmount, { color: colors.primary }]}>
-            ${typeof selectedDelivery.total_price === 'number' ?
+            RWF {typeof selectedDelivery.total_price === 'number' ?
               selectedDelivery.total_price.toFixed(2) :
               parseFloat(selectedDelivery.total_price || '0').toFixed(2)}
           </Text>
@@ -144,7 +144,7 @@ const DeliveryMapTab: React.FC<DeliveryMapTabProps> = ({ navigation, user }) => 
                 Order #{order.id}
               </Text>
               <Text style={[styles.deliveryItemSubtitle, { color: colors.textSecondary }]}>
-                {order.restaurant?.name || 'Restaurant'} • ${typeof order.total_price === 'number' ?
+                {order.restaurant?.name || 'Restaurant'} • RWF {typeof order.total_price === 'number' ?
                   order.total_price.toFixed(2) :
                   parseFloat(order.total_price || '0').toFixed(2)}
               </Text>

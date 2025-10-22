@@ -121,17 +121,6 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
         )}
       </TouchableOpacity>
 
-      <Text style={styles.orText}>OR</Text>
-
-      {/* Social Login */}
-      <View style={styles.socialContainer}>
-        <TouchableOpacity style={styles.socialButton}>
-          <Text style={styles.socialText}>G</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.socialButton}>
-          <Text style={styles.socialText}>f</Text>
-        </TouchableOpacity>
-      </View>
 
       <TouchableOpacity onPress={() => navigation.navigate('Login')}>
         <Text style={styles.footerText}>

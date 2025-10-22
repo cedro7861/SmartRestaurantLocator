@@ -194,7 +194,106 @@ async function main() {
     data: deliveries,
   });
 
-  console.log("✅ Users, restaurants, menu items, and sample orders seeded successfully!");
+  // Seed notifications
+  const notifications = [
+    // Admin notifications
+    {
+      user_id: 1, // admin user
+      title: "Welcome to Smart Restaurant Locator",
+      content: "Your admin account has been successfully created. You can now manage users, restaurants, and system settings.",
+      target_role: "admin",
+      is_read: false,
+    },
+    {
+      user_id: 1,
+      title: "New Restaurant Approval Required",
+      content: "Pizza Palace restaurant is pending approval. Please review and approve the restaurant registration.",
+      target_role: "admin",
+      is_read: false,
+    },
+
+    // Owner notifications
+    {
+      user_id: 2, // manager/owner user
+      title: "Restaurant Setup Complete",
+      content: "Your restaurants 'Pizza Palace' and 'Burger Joint' have been successfully registered and approved.",
+      target_role: "owner",
+      is_read: false,
+    },
+    {
+      user_id: 2,
+      title: "New Order Received",
+      content: "You have received a new order for Pepperoni Pizza from customer. Please confirm the order.",
+      target_role: "owner",
+      is_read: false,
+    },
+    {
+      user_id: 2,
+      title: "Delivery Person Assigned",
+      content: "Delivery person has been assigned to Order #3. Track the delivery progress in real-time.",
+      target_role: "owner",
+      is_read: false,
+    },
+
+    // Delivery notifications
+    {
+      user_id: 3, // delivery user
+      title: "New Delivery Assignment",
+      content: "You have been assigned a new delivery for Order #3. Customer: Customer User, Restaurant: Pizza Palace.",
+      target_role: "delivery",
+      is_read: false,
+    },
+    {
+      user_id: 3,
+      title: "Delivery Started",
+      content: "Your delivery for Order #3 is now on route. Please update your location for live tracking.",
+      target_role: "delivery",
+      is_read: false,
+    },
+
+    // Customer notifications
+    {
+      user_id: 4, // customer user
+      title: "Welcome to Smart Restaurant Locator",
+      content: "Thank you for joining! Your account is pending verification. Please check your email for verification instructions.",
+      target_role: "customer",
+      is_read: false,
+    },
+    {
+      user_id: 4,
+      title: "Order Confirmed",
+      content: "Your order for Pepperoni Pizza from Pizza Palace has been confirmed and is being prepared.",
+      target_role: "customer",
+      is_read: false,
+    },
+    {
+      user_id: 4,
+      title: "Order Out for Delivery",
+      content: "Your order from Pizza Palace is now out for delivery. Track your delivery in real-time.",
+      target_role: "customer",
+      is_read: false,
+    },
+
+    // General notifications (no specific user)
+    {
+      title: "System Maintenance Notice",
+      content: "Scheduled maintenance will occur tonight from 2:00 AM to 4:00 AM EAT. Service may be temporarily unavailable.",
+      target_role: "all",
+      is_read: false,
+    },
+    {
+      title: "New Feature: Live Tracking",
+      content: "We now offer real-time delivery tracking! Monitor your orders and deliveries with live location updates.",
+      target_role: "all",
+      is_read: false,
+    },
+  ];
+
+  await prisma.notification.createMany({
+    data: notifications,
+  });
+
+  console.log("✅ Users, restaurants, menu items, orders, deliveries, and notifications seeded successfully!");
 }
 
 main()

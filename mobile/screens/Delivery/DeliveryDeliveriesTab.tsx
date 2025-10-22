@@ -114,9 +114,10 @@ const DeliveryDeliveriesTab: React.FC<DeliveryDeliveriesTabProps> = ({ navigatio
       const data = await getDeliveryPersonDeliveries();
       console.log('Received deliveries:', data.length);
       setDeliveries(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading deliveries:', error);
-      Alert.alert('Error', 'Failed to load deliveries. Please check your connection and try again.');
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to load deliveries. Please check your connection and try again.';
+      Alert.alert('Error', errorMessage);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -313,7 +314,7 @@ const DeliveryDeliveriesTab: React.FC<DeliveryDeliveriesTabProps> = ({ navigatio
         🕒 {new Date(item.order.order_time).toLocaleString()}
       </Text>
       <Text style={[styles.orderTotal, { color: colors.primary }]}>
-        💰 Total: ${parseFloat(item.order.total_price.toString()).toFixed(2)}
+        💰 Total: RWF {parseFloat(item.order.total_price.toString()).toFixed(2)}
       </Text>
       <Text style={[styles.orderItems, { color: colors.textSecondary }]}>
         📦 {item.order.order_items.length} item{item.order.order_items.length !== 1 ? 's' : ''}
@@ -627,7 +628,7 @@ const DeliveryDeliveriesTab: React.FC<DeliveryDeliveriesTabProps> = ({ navigatio
                     🕒 {new Date(selectedDelivery.order.order_time).toLocaleString()}
                   </Text>
                   <Text style={[styles.detailValue, { color: colors.text }]}>
-                    💰 Total: ${parseFloat(selectedDelivery.order.total_price.toString()).toFixed(2)}
+                    💰 Total: RWF {parseFloat(selectedDelivery.order.total_price.toString()).toFixed(2)}
                   </Text>
                   <Text style={[styles.detailValue, { color: colors.text }]}>
                     📦 {selectedDelivery.order.order_items.length} items

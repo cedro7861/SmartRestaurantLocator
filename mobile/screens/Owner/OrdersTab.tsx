@@ -38,9 +38,10 @@ const OrdersTab: React.FC<OrdersTabProps> = ({ navigation }) => {
       console.log('Orders received:', data);
       console.log('Orders array length:', data?.length || 0);
       setOrders(data || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading orders:', error);
-      Alert.alert('Error', 'Failed to load orders');
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to load orders. Please check your connection and try again.';
+      Alert.alert('Error', errorMessage);
       setOrders([]);
     } finally {
       setLoading(false);
@@ -138,7 +139,7 @@ const OrdersTab: React.FC<OrdersTabProps> = ({ navigation }) => {
                 📋 {order.order_type.replace('_', ' ').toUpperCase()}
               </Text>
               <Text style={[styles.orderTotal, { color: colors.primary }]}>
-                Total: ${parseFloat(order.total_price.toString()).toFixed(2)}
+                Total: RWF {parseFloat(order.total_price.toString()).toFixed(2)}
               </Text>
             </View>
             <Text style={[styles.orderItems, { color: colors.textSecondary }]}>
@@ -250,7 +251,7 @@ const OrdersTab: React.FC<OrdersTabProps> = ({ navigation }) => {
                   Order #{selectedOrder.id} - {selectedOrder.customer?.name}
                 </Text>
                 <Text style={[styles.modalOrderText, { color: colors.textSecondary }]}>
-                  {selectedOrder.restaurant.name} • ${parseFloat(selectedOrder.total_price.toString()).toFixed(2)}
+                  {selectedOrder.restaurant.name} • RWF {parseFloat(selectedOrder.total_price.toString()).toFixed(2)}
                 </Text>
               </View>
             )}

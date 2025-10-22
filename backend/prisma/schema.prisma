@@ -8,17 +8,18 @@ datasource db {
 }
 
 model User {
-  user_id     Int           @id @default(autoincrement())
-  name        String
-  email       String        @unique
-  password    String
-  phone       String?       // nullable since not required
-  role        Role          @default(customer)
-  status      Status        @default(not_verified)
-  created_at  DateTime      @default(now())
-  restaurants Restaurant[]
-  orders      Order[]
-  deliveries  Delivery[]
+  user_id       Int             @id @default(autoincrement())
+  name          String
+  email         String          @unique
+  password      String
+  phone         String?         // nullable since not required
+  role          Role            @default(customer)
+  status        Status          @default(not_verified)
+  created_at    DateTime        @default(now())
+  restaurants   Restaurant[]
+  orders        Order[]
+  deliveries    Delivery[]
+  notifications Notification[]
 }
 
 enum Role {
@@ -131,8 +132,11 @@ model Delivery {
 
 model Notification {
   notification_id Int      @id @default(autoincrement())
+  user_id         Int?
   title           String
   content         String
   target_role     String
+  is_read         Boolean   @default(false)
   created_at      DateTime @default(now())
+  user            User?    @relation(fields: [user_id], references: [user_id], onDelete: SetNull)
 }

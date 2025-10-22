@@ -9,6 +9,7 @@ import {
   loginUser,
   updateProfile,
   changePassword,
+  requestPasswordReset,
 } from "../controllers/userController.js";
 
 const router = express.Router();
@@ -27,5 +28,8 @@ router.put("/profile", authenticateToken, updateProfile);
 
 // 📌 Change password route
 router.put("/change-password", authenticateToken, changePassword);
+
+// 📌 Forgot password route
+router.post("/forgot-password", requestPasswordReset);
 
 export default router;

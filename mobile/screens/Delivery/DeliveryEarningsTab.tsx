@@ -111,7 +111,7 @@ const DeliveryEarningsTab: React.FC<DeliveryEarningsTabProps> = ({ navigation, u
         </Text>
       </View>
       <Text style={[styles.earningsItemAmount, { color: colors.primary }]}>
-        ${item.earnings.toFixed(2)}
+        RWF {item.earnings.toFixed(2)}
       </Text>
     </View>
   );
@@ -147,7 +147,7 @@ const DeliveryEarningsTab: React.FC<DeliveryEarningsTabProps> = ({ navigation, u
       <View style={styles.earningsGrid}>
         <View style={[styles.earningsCard, { backgroundColor: colors.surface }]}>
           <Text style={[styles.earningsNumber, { color: colors.primary }]}>
-            ${stats.totalEarnings.toFixed(2)}
+            RWF {stats.totalEarnings.toFixed(2)}
           </Text>
           <Text style={[styles.earningsLabel, { color: colors.textSecondary }]}>
             Total Earnings
@@ -163,7 +163,7 @@ const DeliveryEarningsTab: React.FC<DeliveryEarningsTabProps> = ({ navigation, u
         </View>
         <View style={[styles.earningsCard, { backgroundColor: colors.surface }]}>
           <Text style={[styles.earningsNumber, { color: colors.warning }]}>
-            ${stats.averageEarnings.toFixed(2)}
+            RWF {stats.averageEarnings.toFixed(2)}
           </Text>
           <Text style={[styles.earningsLabel, { color: colors.textSecondary }]}>
             Avg per Delivery
@@ -171,7 +171,7 @@ const DeliveryEarningsTab: React.FC<DeliveryEarningsTabProps> = ({ navigation, u
         </View>
         <View style={[styles.earningsCard, { backgroundColor: colors.surface }]}>
           <Text style={[styles.earningsNumber, { color: colors.info }]}>
-            ${stats.weeklyEarnings.toFixed(2)}
+            RWF {stats.weeklyEarnings.toFixed(2)}
           </Text>
           <Text style={[styles.earningsLabel, { color: colors.textSecondary }]}>
             This Week
@@ -207,14 +207,14 @@ const DeliveryEarningsTab: React.FC<DeliveryEarningsTabProps> = ({ navigation, u
           💡 <Text style={{ fontWeight: 'bold' }}>Tip:</Text> Focus on high-traffic areas during peak hours to maximize earnings.
         </Text>
         <Text style={[styles.insightsText, { color: colors.text }]}>
-          📈 Your average earnings per delivery is ${stats.averageEarnings.toFixed(2)}.
+          📈 Your average earnings per delivery is RWF {stats.averageEarnings.toFixed(2)}.
         </Text>
         <Text style={[styles.insightsText, { color: colors.text }]}>
           🎯 You've completed {stats.completedDeliveries} {stats.completedDeliveries === 1 ? 'delivery' : 'deliveries'} total.
         </Text>
         {stats.weeklyEarnings > 0 && (
           <Text style={[styles.insightsText, { color: colors.text }]}>
-            ⭐ Great job! You've earned ${stats.weeklyEarnings.toFixed(2)} this week.
+            ⭐ Great job! You've earned RWF {stats.weeklyEarnings.toFixed(2)} this week.
           </Text>
         )}
       </View>

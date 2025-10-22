@@ -116,3 +116,8 @@ export const getDeliveryHistory = async (): Promise<Order[]> => {
   const response = await api.get('/orders/delivery/history');
   return response.data;
 };
+
+export const getAvailableDeliveries = async (): Promise<Order[]> => {
+  const response = await api.get('/orders/delivery/available');
+  return response.data;
+};

@@ -63,7 +63,7 @@ const DeliveryHistoryTab: React.FC<DeliveryHistoryTabProps> = ({ navigation, use
         {new Date(item.order_time).toLocaleString()}
       </Text>
       <Text style={[styles.orderTotal, { color: colors.primary }]}>
-        Earned: ${item.total_price}
+        Earned: RWF {item.total_price}
       </Text>
       <Text style={[styles.orderItems, { color: colors.textSecondary }]}>
         Items: {item.order_items.length}
@@ -95,11 +95,11 @@ const DeliveryHistoryTab: React.FC<DeliveryHistoryTabProps> = ({ navigation, use
           <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total Deliveries</Text>
         </View>
         <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.statNumber, { color: colors.success }]}>${stats.totalEarnings.toFixed(2)}</Text>
+          <Text style={[styles.statNumber, { color: colors.success }]}>RWF {stats.totalEarnings.toFixed(2)}</Text>
           <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total Earnings</Text>
         </View>
         <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.statNumber, { color: colors.warning }]}>${stats.averageEarnings.toFixed(2)}</Text>
+          <Text style={[styles.statNumber, { color: colors.warning }]}>RWF {stats.averageEarnings.toFixed(2)}</Text>
           <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Avg per Delivery</Text>
         </View>
         <View style={[styles.statCard, { backgroundColor: colors.surface }]}>

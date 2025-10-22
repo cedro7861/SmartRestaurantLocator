@@ -642,7 +642,7 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ navigation, user,
                           📅 {new Date(order.order_time).toLocaleDateString()} • {new Date(order.order_time).toLocaleTimeString()}
                         </Text>
                         <Text style={[styles.orderTotal, { color: colors.primary }]}>
-                          💰 ${parseFloat(order.total_price.toString()).toFixed(2)}
+                          💰 RWF {parseFloat(order.total_price.toString()).toFixed(2)}
                         </Text>
                       </View>
                       <View style={styles.orderHeaderRight}>
@@ -717,7 +717,7 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ navigation, user,
                                 {item.item.name} x{item.quantity}
                               </Text>
                               <Text style={[styles.itemPrice, { color: colors.primary }]}>
-                                ${(parseFloat(item.item.price.toString()) * item.quantity).toFixed(2)}
+                                RWF {(parseFloat(item.item.price.toString()) * item.quantity).toFixed(2)}
                               </Text>
                             </View>
                           ))}
@@ -1039,7 +1039,7 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ navigation, user,
 
                     <View style={styles.orderFooter}>
                       <Text style={[styles.orderTotal, { color: colors.primary }]}>
-                        Total: ${parseFloat(order.total_price.toString()).toFixed(2)}
+                        Total: RWF {parseFloat(order.total_price.toString()).toFixed(2)}
                       </Text>
                       <Text style={[styles.orderItemsCount, { color: colors.textSecondary }]}>
                         {order.order_items.length} item{order.order_items.length !== 1 ? 's' : ''}
@@ -1176,7 +1176,7 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ navigation, user,
               </View>
               <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
                 <Text style={[styles.statIcon, { color: colors.success }]}>💰</Text>
-                <Text style={[styles.statValue, { color: colors.text }]}>${totalSpent.toFixed(2)}</Text>
+                <Text style={[styles.statValue, { color: colors.text }]}>RWF {totalSpent.toFixed(2)}</Text>
                 <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total Spent</Text>
               </View>
             </View>
@@ -1218,7 +1218,7 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ navigation, user,
                         {new Date(order.order_time).toLocaleDateString()}
                       </Text>
                       <Text style={[styles.recentOrderTotal, { color: colors.primary }]}>
-                        ${parseFloat(order.total_price.toString()).toFixed(2)}
+                        RWF {parseFloat(order.total_price.toString()).toFixed(2)}
                       </Text>
                     </View>
                     <View style={[styles.recentOrderStatus, {

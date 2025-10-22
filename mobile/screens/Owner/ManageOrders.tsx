@@ -130,7 +130,7 @@ const ManageOrders: React.FC<ManageOrdersProps> = ({ navigation }) => {
                 📋 {order.order_type.replace('_', ' ').toUpperCase()}
               </Text>
               <Text style={[styles.orderTotal, { color: colors.primary }]}>
-                Total: ${parseFloat(order.total_price.toString()).toFixed(2)}
+                Total: RWF {parseFloat(order.total_price.toString()).toFixed(2)}
               </Text>
             </View>
             <Text style={[styles.orderItems, { color: colors.textSecondary }]}>
@@ -242,7 +242,7 @@ const ManageOrders: React.FC<ManageOrdersProps> = ({ navigation }) => {
                   Order #{selectedOrder.id} - {selectedOrder.customer?.name}
                 </Text>
                 <Text style={[styles.modalOrderText, { color: colors.textSecondary }]}>
-                  {selectedOrder.restaurant.name} • ${parseFloat(selectedOrder.total_price.toString()).toFixed(2)}
+                  {selectedOrder.restaurant.name} • RWF {parseFloat(selectedOrder.total_price.toString()).toFixed(2)}
                 </Text>
               </View>
             )}

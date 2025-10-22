@@ -199,7 +199,7 @@ const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({ navigation }) => {
                   <View style={styles.detailRow}>
                     <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>💰 Total:</Text>
                     <Text style={[styles.orderTotal, { color: colors.primary }]}>
-                      ${parseFloat(order.total_price.toString()).toFixed(2)}
+                      RWF {parseFloat(order.total_price.toString()).toFixed(2)}
                     </Text>
                   </View>
                 </View>

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert, TextInput, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert, TextInput, ScrollView, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Picker } from '@react-native-picker/picker';
 import { Theme } from '../../lib/colors';
 import { getUsers, User, changePassword } from '../../lib/api/userApi';
-import { getAllRestaurants, approveRestaurant, rejectRestaurant, Restaurant } from '../../lib/api/restaurantApi';
+import { getAllRestaurants, approveRestaurant, rejectRestaurant, updateRestaurant, Restaurant } from '../../lib/api/restaurantApi';
 import { getAllOrders, updateOrderStatus, Order } from '../../lib/api/orderApi';
 
 interface AdminDashboardProps {
@@ -22,6 +23,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigation, user, onLog
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [editingRestaurant, setEditingRestaurant] = useState<Restaurant | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editLocation, setEditLocation] = useState('');
+  const [editContactInfo, setEditContactInfo] = useState('');
+  const [editStatus, setEditStatus] = useState('');
+  const [showEditModal, setShowEditModal] = useState(false);
 
   const tabs = [
     { name: 'Home', icon: 'home' },
@@ -170,6 +177,43 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigation, user, onLog
     }
   };
 
+  const handleEditRestaurant = (restaurant: Restaurant) => {
+    setEditingRestaurant(restaurant);
+    setEditName(restaurant.name);
+    setEditLocation(restaurant.location || '');
+    setEditContactInfo(restaurant.contact_info || '');
+    setEditStatus(restaurant.status);
+    setShowEditModal(true);
+  };
+
+  const handleSaveRestaurantEdit = async () => {
+    if (!editingRestaurant) return;
+
+    try {
+      await updateRestaurant(editingRestaurant.id, {
+        name: editName,
+        location: editLocation,
+        contact_info: editContactInfo,
+        status: editStatus,
+      });
+      Alert.alert('Success', 'Restaurant updated successfully');
+      setShowEditModal(false);
+      setEditingRestaurant(null);
+      loadRestaurants(); // Refresh the list
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update restaurant');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setShowEditModal(false);
+    setEditingRestaurant(null);
+    setEditName('');
+    setEditLocation('');
+    setEditContactInfo('');
+    setEditStatus('');
+  };
+
   const renderUser = ({ item }: { item: User }) => (
     <View style={[styles.userCard, { backgroundColor: colors.surface }]}>
       <Text style={[styles.userName, { color: colors.text }]}>{item.name}</Text>
@@ -212,7 +256,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigation, user, onLog
         {new Date(item.order_time).toLocaleString()}
       </Text>
       <Text style={[styles.orderTotal, { color: colors.primary }]}>
-        Total: ${item.total_price}
+        Total: RWF {item.total_price}
       </Text>
       <Text style={[styles.orderItems, { color: colors.textSecondary }]}>
         Items: {item.order_items.length}
@@ -276,24 +320,33 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigation, user, onLog
         Orders: {item._count?.orders || 0}
       </Text>
 
-      {!item.approved && (
-        <View style={styles.actionButtons}>
-          <TouchableOpacity
-            style={[styles.approveButton, { backgroundColor: colors.success }]}
-            onPress={() => handleApproveRestaurant(item)}
-          >
-            <Ionicons name="checkmark" size={16} color={colors.background} />
-            <Text style={[styles.buttonText, { color: colors.background }]}>Approve</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.rejectButton, { backgroundColor: colors.error }]}
-            onPress={() => handleRejectRestaurant(item)}
-          >
-            <Ionicons name="close" size={16} color={colors.background} />
-            <Text style={[styles.buttonText, { color: colors.background }]}>Reject</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      <View style={styles.actionButtons}>
+        {!item.approved && (
+          <>
+            <TouchableOpacity
+              style={[styles.approveButton, { backgroundColor: colors.success }]}
+              onPress={() => handleApproveRestaurant(item)}
+            >
+              <Ionicons name="checkmark" size={16} color={colors.background} />
+              <Text style={[styles.buttonText, { color: colors.background }]}>Approve</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.rejectButton, { backgroundColor: colors.error }]}
+              onPress={() => handleRejectRestaurant(item)}
+            >
+              <Ionicons name="close" size={16} color={colors.background} />
+              <Text style={[styles.buttonText, { color: colors.background }]}>Reject</Text>
+            </TouchableOpacity>
+          </>
+        )}
+        <TouchableOpacity
+          style={[styles.editButton, { backgroundColor: colors.primary }]}
+          onPress={() => handleEditRestaurant(item)}
+        >
+          <Ionicons name="pencil" size={16} color={colors.background} />
+          <Text style={[styles.buttonText, { color: colors.background }]}>Edit</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
@@ -368,7 +421,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigation, user, onLog
                 </View>
                 <View style={[styles.adminStatCard, { backgroundColor: colors.surface }]}>
                   <Ionicons name="cash" size={32} color={colors.info} />
-                  <Text style={[styles.statValue, { color: colors.text }]}>${totalRevenue.toFixed(2)}</Text>
+                  <Text style={[styles.statValue, { color: colors.text }]}>RWF {totalRevenue.toFixed(2)}</Text>
                   <Text style={[styles.adminStatLabel, { color: colors.textSecondary }]}>Total Revenue</Text>
                 </View>
               </View>
@@ -385,12 +438,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigation, user, onLog
                 </View>
                 <View style={[styles.todayCard, { backgroundColor: colors.success + '15' }]}>
                   <Ionicons name="wallet" size={24} color={colors.success} />
-                  <Text style={[styles.todayValue, { color: colors.success }]}>${revenueToday.toFixed(2)}</Text>
+                  <Text style={[styles.todayValue, { color: colors.success }]}>RWF {revenueToday.toFixed(2)}</Text>
                   <Text style={[styles.todayLabel, { color: colors.textSecondary }]}>Revenue Today</Text>
                 </View>
                 <View style={[styles.todayCard, { backgroundColor: colors.warning + '15' }]}>
                   <Ionicons name="trending-up" size={24} color={colors.warning} />
-                  <Text style={[styles.todayValue, { color: colors.warning }]}>${avgOrderValue.toFixed(2)}</Text>
+                  <Text style={[styles.todayValue, { color: colors.warning }]}>RWF {avgOrderValue.toFixed(2)}</Text>
                   <Text style={[styles.todayLabel, { color: colors.textSecondary }]}>Avg Order Value</Text>
                 </View>
               </View>
@@ -543,7 +596,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigation, user, onLog
                         </Text>
                       </View>
                       <Text style={[styles.recentOrderAmount, { color: colors.primary }]}>
-                        ${parseFloat(order.total_price.toString()).toFixed(2)}
+                        RWF {parseFloat(order.total_price.toString()).toFixed(2)}
                       </Text>
                     </View>
                   </TouchableOpacity>
@@ -675,6 +728,77 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigation, user, onLog
       <View style={styles.content}>
         {renderTabContent()}
       </View>
+
+      {/* Edit Restaurant Modal */}
+      <Modal
+        visible={showEditModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={handleCancelEdit}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Edit Restaurant</Text>
+
+            <Text style={[styles.inputLabel, { color: colors.text }]}>Restaurant Name</Text>
+            <TextInput
+              style={[styles.input, { borderColor: colors.border, color: colors.text }]}
+              value={editName}
+              onChangeText={setEditName}
+              placeholder="Enter restaurant name"
+              placeholderTextColor={colors.textSecondary}
+            />
+
+            <Text style={[styles.inputLabel, { color: colors.text }]}>Location</Text>
+            <TextInput
+              style={[styles.input, { borderColor: colors.border, color: colors.text }]}
+              value={editLocation}
+              onChangeText={setEditLocation}
+              placeholder="Enter location"
+              placeholderTextColor={colors.textSecondary}
+            />
+
+            <Text style={[styles.inputLabel, { color: colors.text }]}>Contact Info</Text>
+            <TextInput
+              style={[styles.input, { borderColor: colors.border, color: colors.text }]}
+              value={editContactInfo}
+              onChangeText={setEditContactInfo}
+              placeholder="Enter contact information"
+              placeholderTextColor={colors.textSecondary}
+            />
+
+            <Text style={[styles.inputLabel, { color: colors.text }]}>Status</Text>
+            <View style={[styles.pickerContainer, { borderColor: colors.border }]}>
+              <Picker
+                selectedValue={editStatus}
+                onValueChange={(itemValue) => setEditStatus(itemValue)}
+                style={[styles.picker, { color: colors.text }]}
+                dropdownIconColor={colors.primary}
+              >
+                <Picker.Item label="Select status..." value="" />
+                <Picker.Item label="Open" value="open" />
+                <Picker.Item label="Closed" value="closed" />
+                <Picker.Item label="Temporarily Closed" value="temporarily_closed" />
+              </Picker>
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancelButton, { borderColor: colors.border }]}
+                onPress={handleCancelEdit}
+              >
+                <Text style={[styles.modalButtonText, { color: colors.text }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalSaveButton, { backgroundColor: colors.primary }]}
+                onPress={handleSaveRestaurantEdit}
+              >
+                <Text style={[styles.modalButtonText, { color: colors.background }]}>Save Changes</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -890,6 +1014,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   rejectButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Theme.spacing.sm,
+    borderRadius: Theme.borderRadius.sm,
+    flex: 1,
+    marginLeft: Theme.spacing.xs,
+    justifyContent: 'center',
+  },
+  editButton: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: Theme.spacing.sm,
@@ -1201,6 +1334,62 @@ const styles = StyleSheet.create({
   recentOrderTime: {
     fontSize: Theme.typography.fontSize.sm,
     marginTop: Theme.spacing.xs,
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '90%',
+    maxHeight: '80%',
+    borderRadius: Theme.borderRadius.lg,
+    elevation: 5,
+    padding: Theme.spacing.lg,
+  },
+  modalTitle: {
+    fontSize: Theme.typography.fontSize.xl,
+    fontWeight: Theme.typography.fontWeight.bold,
+    marginBottom: Theme.spacing.lg,
+    textAlign: 'center',
+  },
+  inputLabel: {
+    fontSize: Theme.typography.fontSize.md,
+    fontWeight: Theme.typography.fontWeight.medium,
+    marginBottom: Theme.spacing.sm,
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderRadius: Theme.borderRadius.md,
+    backgroundColor: Theme.colors.surface,
+    marginBottom: Theme.spacing.lg,
+  },
+  picker: {
+    height: 50,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  modalButton: {
+    flex: 1,
+    padding: Theme.spacing.md,
+    borderRadius: Theme.borderRadius.md,
+    alignItems: 'center',
+    marginHorizontal: Theme.spacing.sm,
+  },
+  modalCancelButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+  },
+  modalSaveButton: {
+    // backgroundColor set in component
+  },
+  modalButtonText: {
+    fontSize: Theme.typography.fontSize.md,
+    fontWeight: Theme.typography.fontWeight.medium,
   },
 });
 

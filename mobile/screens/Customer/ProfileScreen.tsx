@@ -15,15 +15,22 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation, user }) => {
   const { colors, spacing, borderRadius, typography } = Theme;
 
   const handleUpdateProfile = async () => {
+    if (!profileName.trim() || !profileEmail.trim()) {
+      Alert.alert('Error', 'Name and email are required');
+      return;
+    }
+
     try {
       const result = await updateProfile({
-        name: profileName,
-        email: profileEmail,
-        phone: profilePhone,
+        name: profileName.trim(),
+        email: profileEmail.trim(),
+        phone: profilePhone.trim() || undefined,
       });
       Alert.alert('Success', 'Profile updated successfully');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to update profile');
+      // Navigate back after successful update
+      navigation.goBack();
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.error || 'Failed to update profile');
     }
   };
 

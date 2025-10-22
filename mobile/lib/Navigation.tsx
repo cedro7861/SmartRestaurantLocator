@@ -5,6 +5,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useAuth } from "./AuthContext";
 import LoginScreen from "../screens/Auth/LoginScreen";
 import RegisterScreen from "../screens/Auth/RegisterScreen";
+import ForgotPasswordScreen from "../screens/Auth/ForgotPasswordScreen";
 import Dashboard from "../screens/Admin/Dashboard";
 import AdminUsersScreen from "../screens/Admin/AdminUsersTab";
 import AdminRestaurantsTab from "../screens/Admin/AdminRestaurantsTab";
@@ -45,6 +46,9 @@ import LogoutScreen from "../screens/Customer/LogoutScreen";
 import ProfileScreen from "../screens/Customer/ProfileScreen";
 import CustomerChangePassword from "../screens/Customer/CustomerChangePassword";
 import ContactSupport from "../screens/Customer/ContactSupport";
+import CustomerTermsConditions from "../screens/Customer/TermsConditions";
+import OwnerTermsConditions from "../screens/Owner/TermsConditions";
+import DeliveryTermsConditions from "../screens/Delivery/TermsConditions";
 
 import OwnerProfileScreen from "../screens/Owner/ProfileScreen";
 import { NotificationScreen } from "../screens/Notifications";
@@ -209,6 +213,17 @@ const OwnerNavigator = () => {
         }}
       />
       <OwnerStack.Screen
+        name="TermsConditions"
+        options={{
+          title: "Terms & Conditions",
+          headerStyle: { backgroundColor: Theme.colors.surface },
+          headerTintColor: "#fff",
+          headerTitleStyle: { fontWeight: "bold" },
+          headerShown: true,
+        }}
+        component={OwnerTermsConditions}
+      />
+      <OwnerStack.Screen
         name="Notifications"
         options={{
           title: "Notifications",
@@ -314,6 +329,17 @@ const DeliveryNavigator = () => {
       >
         {(props: any) => <DeliveryMapTab {...props} user={user} />}
       </DeliveryStack.Screen>
+      <DeliveryStack.Screen
+        name="TermsConditions"
+        options={{
+          title: "Terms & Conditions",
+          headerStyle: { backgroundColor: Theme.colors.surface },
+          headerTintColor: "#fff",
+          headerTitleStyle: { fontWeight: "bold" },
+          headerShown: true,
+        }}
+        component={DeliveryTermsConditions}
+      />
       <DeliveryStack.Screen
         name="Notifications"
         options={{
@@ -535,6 +561,17 @@ const CustomerNavigator = () => {
         {(props: any) => <NotificationScreen {...props} user={user} />}
       </CustomerStack.Screen>
       <CustomerStack.Screen
+        name="TermsConditions"
+        options={{
+          title: "Terms & Conditions",
+          headerStyle: { backgroundColor: Theme.colors.surface },
+          headerTintColor: "#fff",
+          headerTitleStyle: { fontWeight: "bold" },
+          headerShown: true,
+        }}
+        component={CustomerTermsConditions}
+      />
+      <CustomerStack.Screen
         name="LogoutScreen"
         options={{
           title: "Logout",
@@ -565,6 +602,7 @@ const Navigation: React.FC = () => {
             {(props: any) => <LoginScreen {...props} onLogin={login} />}
           </AuthStack.Screen>
           <AuthStack.Screen name="Register" component={RegisterScreen} />
+          <AuthStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
         </AuthStack.Navigator>
       </NavigationContainer>
     );

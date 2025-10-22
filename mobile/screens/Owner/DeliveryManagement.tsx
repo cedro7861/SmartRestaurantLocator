@@ -186,7 +186,7 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ navigation, use
           🏪 {item.restaurant.name}
         </Text>
         <Text style={[styles.orderTotal, { color: colors.primary }]}>
-          💰 ${parseFloat(item.total_price.toString()).toFixed(2)}
+          💰 RWF {parseFloat(item.total_price.toString()).toFixed(2)}
         </Text>
 
         <TouchableOpacity

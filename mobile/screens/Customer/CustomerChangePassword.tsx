@@ -66,8 +66,8 @@ const CustomerChangePassword: React.FC<CustomerChangePasswordProps> = ({ navigat
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to change password. Please try again.');
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.error || 'Failed to change password. Please try again.');
     } finally {
       setLoading(false);
     }

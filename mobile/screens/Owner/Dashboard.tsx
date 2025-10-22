@@ -243,7 +243,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ navigation, user, onLog
                 </View>
                 <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
                   <Text style={[styles.statIcon, { color: colors.info }]}>💰</Text>
-                  <Text style={[styles.statValue, { color: colors.text }]}>${analytics.totalRevenue.toFixed(2)}</Text>
+                  <Text style={[styles.statValue, { color: colors.text }]}>RWF {analytics.totalRevenue.toFixed(2)}</Text>
                   <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Revenue</Text>
                 </View>
               </View>
@@ -424,7 +424,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ navigation, user, onLog
                       <>
                         <View style={styles.menuItemHeader}>
                           <Text style={[styles.menuItemName, { color: colors.text }]}>{item.name}</Text>
-                          <Text style={[styles.menuItemPrice, { color: colors.primary }]}>${item.price.toFixed(2)}</Text>
+                          <Text style={[styles.menuItemPrice, { color: colors.primary }]}>RWF {item.price.toFixed(2)}</Text>
                         </View>
                         <Text style={[styles.menuItemRestaurant, { color: colors.textSecondary }]}>
                           {item.restaurant?.name || 'No restaurant'}
@@ -577,7 +577,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ navigation, user, onLog
                   <Text style={[styles.analyticsLabel, { color: colors.textSecondary }]}>Total Orders</Text>
                 </View>
                 <View style={[styles.analyticsCard, { backgroundColor: colors.surface }]}>
-                  <Text style={[styles.analyticsNumber, { color: colors.success }]}>${settingsAnalytics.totalRevenue.toFixed(2)}</Text>
+                  <Text style={[styles.analyticsNumber, { color: colors.success }]}>RWF {settingsAnalytics.totalRevenue.toFixed(2)}</Text>
                   <Text style={[styles.analyticsLabel, { color: colors.textSecondary }]}>Total Revenue</Text>
                 </View>
                 <View style={[styles.analyticsCard, { backgroundColor: colors.surface }]}>

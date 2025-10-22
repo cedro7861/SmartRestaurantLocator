@@ -258,7 +258,7 @@ const MenuTab: React.FC<MenuTabProps> = ({ navigation }) => {
                     <View style={styles.menuItemContent}>
                       <View style={styles.menuItemHeader}>
                         <Text style={[styles.menuItemName, { color: colors.text }]}>{item.name}</Text>
-                        <Text style={[styles.menuItemPrice, { color: colors.primary }]}>${item.price}</Text>
+                        <Text style={[styles.menuItemPrice, { color: colors.primary }]}>RWF {item.price}</Text>
                       </View>
                       <Text style={[styles.menuItemRestaurant, { color: colors.textSecondary }]}>
                         <Ionicons name="restaurant" size={14} color={colors.textSecondary} /> {item.restaurant?.name}

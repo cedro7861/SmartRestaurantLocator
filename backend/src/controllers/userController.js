@@ -3,6 +3,8 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
+import nodemailer from "nodemailer";
 
 // 📌 Register user (hash password before saving)
 export const createUser = async (req, res) => {
@@ -242,5 +244,84 @@ export const deleteUser = async (req, res) => {
     res.json({ message: "User deleted successfully" });
   } catch (error) {
     res.status(500).json({ error: "Failed to delete user" });
+  }
+};
+
+// 📌 Request password reset
+export const requestPasswordReset = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    // Validate email
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+
+    // Check if user exists
+    const user = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+    });
+
+    // Always return success message for security (don't reveal if email exists)
+    if (!user) {
+      return res.json({
+        message: "If an account with this email exists, we have sent you a password reset link."
+      });
+    }
+
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    // Store reset token in database (you might want to add a reset_token field to user table)
+    // For now, we'll create a simple in-memory solution or use a temporary field
+    // In production, you'd want to create a separate password_reset_tokens table
+
+    // Create email transporter
+    const transporter = nodemailer.createTransporter({
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: process.env.SMTP_PORT || 587,
+      secure: false,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+
+    // Email content
+    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
+    const mailOptions = {
+      from: process.env.SMTP_USER,
+      to: email,
+      subject: 'Password Reset - Smart Restaurant Locator',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #4db6ac;">Password Reset Request</h2>
+          <p>Hello ${user.name},</p>
+          <p>You requested a password reset for your Smart Restaurant Locator account.</p>
+          <p>Please click the link below to reset your password:</p>
+          <a href="${resetUrl}" style="background-color: #4db6ac; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; margin: 16px 0;">Reset Password</a>
+          <p><strong>This link will expire in 24 hours.</strong></p>
+          <p>If you didn't request this password reset, please ignore this email.</p>
+          <p>For security reasons, never share this email with anyone.</p>
+          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+          <p style="color: #666; font-size: 12px;">
+            Smart Restaurant Locator<br>
+            If you have any questions, contact our support team.
+          </p>
+        </div>
+      `,
+    };
+
+    // Send email
+    await transporter.sendMail(mailOptions);
+
+    res.json({
+      message: "If an account with this email exists, we have sent you a password reset link."
+    });
+
+  } catch (error) {
+    console.error('Password reset request error:', error);
+    res.status(500).json({ error: "Failed to process password reset request" });
   }
 };

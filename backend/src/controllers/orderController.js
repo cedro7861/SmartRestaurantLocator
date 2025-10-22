@@ -306,6 +306,11 @@ export const getAllOrders = async (req, res) => {
           },
         },
         deliveries: {
+          where: {
+            status: {
+              in: ['pending', 'on_route', 'delivered']
+            }
+          },
           select: {
             delivery_id: true,
             status: true,

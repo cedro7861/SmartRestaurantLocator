@@ -39,19 +39,15 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation, onLogin }) => {
       const response = await loginUser(loginData);
       console.log("Login response:", response);
       onLogin(response.user, response.token);
-    } catch (error) {
+    } catch (error: any) {
       console.log("Login error:", error);
-      Alert.alert("Login Failed", "Invalid credentials");
+      const errorMessage = error.response?.data?.error || error.message || "Invalid credentials";
+      Alert.alert("Login Failed", errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  // Placeholder functions for the new design elements
-  const handleGoogleLogin = () =>
-    Alert.alert("Social Login", "Google Sign-In Tapped");
-  const handleFacebookLogin = () =>
-    Alert.alert("Social Login", "Facebook Sign-In Tapped");
   const handleForgotPassword = () => navigation.navigate("ForgotPassword");
 
   return (
@@ -125,33 +121,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation, onLogin }) => {
         )}
       </TouchableOpacity>
 
-      {/* 7. OR Separator */}
-      <Text style={styles.orText}>OR</Text>
-
-      {/* 8. Continue with Google Button */}
-      <TouchableOpacity style={styles.socialButton} onPress={handleGoogleLogin}>
-        <Icon
-          name="google"
-          size={20}
-          color="#FFFFFF"
-          style={styles.socialIcon}
-        />
-        <Text style={styles.socialButtonText}>Continue with Google</Text>
-      </TouchableOpacity>
-
-      {/* 9. Continue with Facebook Button */}
-      <TouchableOpacity
-        style={styles.socialButton}
-        onPress={handleFacebookLogin}
-      >
-        <Icon
-          name="facebook"
-          size={20}
-          color="#FFFFFF"
-          style={styles.socialIcon}
-        />
-        <Text style={styles.socialButtonText}>Continue with Facebook</Text>
-      </TouchableOpacity>
 
       {/* 10. Sign Up Link */}
       <TouchableOpacity

@@ -87,12 +87,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, user, onLogout }) =
             </View>
             <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
               <Text style={[styles.statIcon, { color: colors.success }]}>💰</Text>
-              <Text style={[styles.statValue, { color: colors.text }]}>${totalSpent.toFixed(2)}</Text>
+              <Text style={[styles.statValue, { color: colors.text }]}>RWF {totalSpent.toFixed(2)}</Text>
               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total Spent</Text>
             </View>
             <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
               <Text style={[styles.statIcon, { color: colors.info }]}>📊</Text>
-              <Text style={[styles.statValue, { color: colors.text }]}>${avgOrderValue.toFixed(2)}</Text>
+              <Text style={[styles.statValue, { color: colors.text }]}>RWF {avgOrderValue.toFixed(2)}</Text>
               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Avg Order</Text>
             </View>
           </View>
@@ -154,7 +154,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, user, onLogout }) =
                     {new Date(order.order_time).toLocaleDateString()} • {new Date(order.order_time).toLocaleTimeString()}
                   </Text>
                   <Text style={[styles.recentOrderTotal, { color: colors.primary }]}>
-                    ${parseFloat(order.total_price.toString()).toFixed(2)} • {order.order_items.length} item{order.order_items.length !== 1 ? 's' : ''}
+                    RWF {parseFloat(order.total_price.toString()).toFixed(2)} • {order.order_items.length} item{order.order_items.length !== 1 ? 's' : ''}
                   </Text>
                 </View>
                 <View style={[styles.recentOrderStatus, {

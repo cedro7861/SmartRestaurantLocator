@@ -6,9 +6,11 @@ import {
   TouchableOpacity,
   ScrollView,
   SafeAreaView, // Use SafeAreaView for better layout on modern devices
+  Alert,
 } from "react-native";
 // Assuming Theme is exported from the same location as Colors
 import { Theme } from "../../lib/colors";
+import { useTheme } from "../../lib/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 
 // --- Type Definitions (Kept from original) ---
@@ -30,8 +32,10 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
   user,
   onLogout,
 }) => {
-  // Destructure theme for cleaner access
-  const { colors, spacing, borderRadius, typography } = Theme;
+  // Use theme context
+  const { theme, mode, setMode, isDark } = useTheme();
+  const { spacing, borderRadius, typography } = Theme;
+  const colors = theme;
 
   // --- Setting Options Data ---
 
@@ -55,6 +59,23 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
       title: "Notifications",
       icon: "notifications-outline",
       onPress: () => navigation.navigate("Notifications"),
+    },
+    {
+      title: "Theme",
+      icon: isDark ? "moon-outline" : "sunny-outline",
+      onPress: () => {
+        const nextMode = mode === 'light' ? 'dark' : mode === 'dark' ? 'system' : 'light';
+        setMode(nextMode);
+      },
+      subtitle: mode === 'system' ? 'System' : mode === 'light' ? 'Light' : 'Dark',
+    },
+  ];
+
+  const supportOptions = [
+    {
+      title: "Terms & Conditions",
+      icon: "document-text-outline",
+      onPress: () => navigation.navigate("TermsConditions"),
     },
   ];
 
@@ -88,9 +109,16 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
         >
           <Ionicons name={item.icon as any} size={20} color={colors.primary} />
         </View>
-        <Text style={[styles.settingTitle, { color: colors.text }]}>
-          {item.title}
-        </Text>
+        <View style={styles.settingTextContainer}>
+          <Text style={[styles.settingTitle, { color: colors.text }]}>
+            {item.title}
+          </Text>
+          {item.subtitle && (
+            <Text style={[styles.settingSubtitle, { color: colors.textSecondary }]}>
+              {item.subtitle}
+            </Text>
+          )}
+        </View>
       </View>
       <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
     </TouchableOpacity>
@@ -159,6 +187,14 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
           {accountOptions.map(renderSettingItem)}
         </View>
 
+        {/* SUPPORT SECTION */}
+        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>
+          Support
+        </Text>
+        <View style={styles.settingsList}>
+          {supportOptions.map(renderSettingItem)}
+        </View>
+
         {/* LOGOUT BUTTON - Made prominent */}
         <TouchableOpacity
           style={[
@@ -170,7 +206,22 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
               marginBottom: spacing.xxl,
             },
           ]}
-          onPress={onLogout}
+          onPress={() => {
+            Alert.alert(
+              'Logout Confirmation',
+              'Are you sure you want to logout from your account?',
+              [
+                { text: 'No', style: 'cancel' },
+                {
+                  text: 'Yes, Logout',
+                  style: 'destructive',
+                  onPress: () => {
+                    onLogout();
+                  }
+                },
+              ]
+            );
+          }}
           activeOpacity={0.7}
         >
           <Ionicons name="log-out-outline" size={20} color={colors.text} />
@@ -280,6 +331,14 @@ const styles = StyleSheet.create({
   settingTitle: {
     fontSize: Theme.typography.fontSize.md,
     fontWeight: Theme.typography.fontWeight.medium,
+  },
+  settingTextContainer: {
+    flex: 1,
+  },
+  settingSubtitle: {
+    fontSize: Theme.typography.fontSize.sm,
+    fontWeight: Theme.typography.fontWeight.regular,
+    marginTop: 2,
   },
   // --- Logout Button Styles ---
   logoutButton: {
