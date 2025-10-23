@@ -9,11 +9,14 @@ export const authenticateToken = async (req, res, next) => {
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
   if (!token) {
+    console.log('No token provided in request');
     return res.status(401).json({ error: 'Access token required' });
   }
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'supersecretkey', { ignoreNotBefore: true, clockTolerance: 300 }); // ignore iat check
+    console.log('Decoded token:', decoded);
+
     let user;
     if (decoded.id) {
       user = await prisma.user.findUnique({
@@ -26,6 +29,7 @@ export const authenticateToken = async (req, res, next) => {
     }
 
     if (!user) {
+      console.log('User not found for token:', decoded);
       return res.status(401).json({ error: 'User not found' });
     }
 
@@ -34,8 +38,10 @@ export const authenticateToken = async (req, res, next) => {
       email: user.email,
       role: user.role
     };
+    console.log('Authenticated user:', req.user);
     next();
   } catch (error) {
+    console.log('Token verification error:', error.message);
     return res.status(403).json({ error: 'Invalid or expired token' });
   }
 };

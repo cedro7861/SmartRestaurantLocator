@@ -75,31 +75,52 @@ const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({ navigation }) => {
         </View>
 
         <View style={styles.orderStats}>
-          <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.statIcon, { color: colors.primary }]}>📊</Text>
-            <Text style={[styles.statNumber, { color: colors.primary }]}>{orders.length}</Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total Orders</Text>
+          {/* First Row: Total Orders, Pending, Delivered */}
+          <View style={styles.statsRow}>
+            <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.statIcon, { color: colors.primary }]}>📊</Text>
+              <Text style={[styles.statNumber, { color: colors.primary }]}>{orders.length}</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total Orders</Text>
+            </View>
+            <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.statIcon, { color: colors.warning }]}>⏳</Text>
+              <Text style={[styles.statNumber, { color: colors.warning }]}>
+                {orders.filter(o => o.status === 'pending').length}
+              </Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Pending</Text>
+            </View>
+            <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.statIcon, { color: colors.success }]}>✅</Text>
+              <Text style={[styles.statNumber, { color: colors.success }]}>
+                {orders.filter(o => o.status === 'delivered').length}
+              </Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Delivered</Text>
+            </View>
           </View>
-          <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.statIcon, { color: colors.warning }]}>⏳</Text>
-            <Text style={[styles.statNumber, { color: colors.warning }]}>
-              {orders.filter(o => o.status === 'pending').length}
-            </Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Pending</Text>
-          </View>
-          <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.statIcon, { color: colors.success }]}>✅</Text>
-            <Text style={[styles.statNumber, { color: colors.success }]}>
-              {orders.filter(o => o.status === 'delivered').length}
-            </Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Delivered</Text>
-          </View>
-          <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.statIcon, { color: colors.info }]}>👨‍🍳</Text>
-            <Text style={[styles.statNumber, { color: colors.info }]}>
-              {orders.filter(o => o.status === 'preparing').length}
-            </Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Preparing</Text>
+
+          {/* Second Row: Preparing, Ready, Delivering */}
+          <View style={styles.statsRow}>
+            <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.statIcon, { color: colors.info }]}>👨‍🍳</Text>
+              <Text style={[styles.statNumber, { color: colors.info }]}>
+                {orders.filter(o => o.status === 'preparing').length}
+              </Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Preparing</Text>
+            </View>
+            <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.statIcon, { color: colors.primary }]}>🍽️</Text>
+              <Text style={[styles.statNumber, { color: colors.primary }]}>
+                {orders.filter(o => o.status === 'ready').length}
+              </Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Ready</Text>
+            </View>
+            <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.statIcon, { color: colors.info }]}>🚚</Text>
+              <Text style={[styles.statNumber, { color: colors.info }]}>
+                {orders.filter(o => o.status === 'delivering').length}
+              </Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Delivering</Text>
+            </View>
           </View>
         </View>
 
@@ -204,37 +225,6 @@ const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({ navigation }) => {
                   </View>
                 </View>
 
-                {order.status !== 'delivered' && (
-                  <View style={styles.orderActions}>
-                    <Text style={[styles.actionsLabel, { color: colors.textSecondary }]}>Update Status:</Text>
-                    <View style={styles.actionButtons}>
-                      {order.status === 'pending' && (
-                        <TouchableOpacity
-                          style={[styles.statusButton, { backgroundColor: colors.warning }]}
-                          onPress={() => handleUpdateOrderStatus(order, 'preparing')}
-                        >
-                          <Text style={[styles.buttonText, { color: colors.background }]}>👨‍🍳 Start Preparing</Text>
-                        </TouchableOpacity>
-                      )}
-                      {order.status === 'preparing' && (
-                        <TouchableOpacity
-                          style={[styles.statusButton, { backgroundColor: colors.success }]}
-                          onPress={() => handleUpdateOrderStatus(order, 'ready')}
-                        >
-                          <Text style={[styles.buttonText, { color: colors.background }]}>✅ Mark Ready</Text>
-                        </TouchableOpacity>
-                      )}
-                      {order.status === 'ready' && (
-                        <TouchableOpacity
-                          style={[styles.statusButton, { backgroundColor: colors.primary }]}
-                          onPress={() => handleUpdateOrderStatus(order, 'delivered')}
-                        >
-                          <Text style={[styles.buttonText, { color: colors.background }]}>🚚 Mark Delivered</Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                  </View>
-                )}
               </View>
             ))}
           </View>
@@ -281,10 +271,13 @@ const styles = StyleSheet.create({
     fontSize: Theme.typography.fontSize.md,
   },
   orderStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
     paddingHorizontal: Theme.spacing.lg,
     marginBottom: Theme.spacing.lg,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: Theme.spacing.sm,
   },
   statCard: {
     alignItems: 'center',

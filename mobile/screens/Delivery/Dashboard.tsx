@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, FlatList, 
 import { Theme } from '../../lib/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { getAvailableDeliveries, getDeliveryHistory, updateOrderStatus, Order } from '../../lib/api/orderApi';
-import { changePassword } from '../../lib/api/userApi';
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { getDeliveryPersonDeliveries } from '../../lib/api/deliveryApi';
@@ -548,43 +547,6 @@ const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({ navigation, user,
               </View>
             </View>
 
-            {/* Change Password Section */}
-            <View style={styles.changePasswordSection}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Change Password</Text>
-              <Text style={[styles.sectionDescription, { color: colors.textSecondary }]}>
-                Update your password to keep your account secure.
-              </Text>
-
-              <View style={styles.passwordInputContainer}>
-                <TextInput
-                  style={[styles.passwordInput, { borderColor: colors.border, color: colors.text }]}
-                  placeholder="Current Password"
-                  placeholderTextColor={colors.textSecondary}
-                  secureTextEntry
-                />
-                <TextInput
-                  style={[styles.passwordInput, { borderColor: colors.border, color: colors.text }]}
-                  placeholder="New Password"
-                  placeholderTextColor={colors.textSecondary}
-                  secureTextEntry
-                />
-                <TextInput
-                  style={[styles.passwordInput, { borderColor: colors.border, color: colors.text }]}
-                  placeholder="Confirm New Password"
-                  placeholderTextColor={colors.textSecondary}
-                  secureTextEntry
-                />
-              </View>
-
-              <TouchableOpacity
-                style={[styles.changePasswordButton, { backgroundColor: colors.primary }]}
-                onPress={() => Alert.alert('Success', 'Password updated successfully!')}
-              >
-                <Text style={[styles.changePasswordButtonText, { color: colors.background }]}>
-                  Update Password
-                </Text>
-              </TouchableOpacity>
-            </View>
 
             {/* App Settings */}
             <View style={styles.otherSettingsSection}>
@@ -1278,44 +1240,6 @@ const styles = StyleSheet.create({
   },
   customerInsightSubtext: {
     fontSize: Theme.typography.fontSize.sm,
-  },
-  // Change Password Styles
-  changePasswordSection: {
-    marginBottom: Theme.spacing.xl,
-    padding: Theme.spacing.lg,
-    backgroundColor: Theme.colors.surface,
-    borderRadius: Theme.borderRadius.lg,
-    borderWidth: 1,
-    borderColor: Theme.colors.border,
-  },
-  sectionDescription: {
-    fontSize: Theme.typography.fontSize.md,
-    marginBottom: Theme.spacing.lg,
-    lineHeight: 20,
-  },
-  passwordInputContainer: {
-    marginBottom: Theme.spacing.lg,
-  },
-  passwordInput: {
-    borderWidth: 1,
-    borderRadius: Theme.borderRadius.md,
-    padding: Theme.spacing.md,
-    marginBottom: Theme.spacing.sm,
-    fontSize: Theme.typography.fontSize.md,
-  },
-  changePasswordButton: {
-    padding: Theme.spacing.md,
-    borderRadius: Theme.borderRadius.md,
-    alignItems: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  changePasswordButtonText: {
-    fontSize: Theme.typography.fontSize.md,
-    fontWeight: Theme.typography.fontWeight.medium,
   },
   otherSettingsSection: {
     marginBottom: Theme.spacing.xl,

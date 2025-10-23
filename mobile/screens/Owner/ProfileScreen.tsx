@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert, TextInput, ScrollView,
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Theme } from '../../lib/colors';
 import { useAuth } from '../../lib/AuthContext';
-import { updateProfile, changePassword } from '../../lib/api/userApi';
+import { updateProfile } from '../../lib/api/userApi';
 import { Ionicons } from '@expo/vector-icons';
 
 interface ProfileScreenProps {
@@ -85,42 +85,6 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     }
   };
 
-  const handleChangePassword = async () => {
-    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
-      Alert.alert('Error', 'All password fields are required');
-      return;
-    }
-
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      Alert.alert('Error', 'New passwords do not match');
-      return;
-    }
-
-    if (passwordForm.newPassword.length < 6) {
-      Alert.alert('Error', 'New password must be at least 6 characters');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await changePassword({
-        currentPassword: passwordForm.currentPassword,
-        newPassword: passwordForm.newPassword,
-      });
-
-      setShowPasswordModal(false);
-      setPasswordForm({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: '',
-      });
-      Alert.alert('Success', 'Password changed successfully');
-    } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to change password');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -256,13 +220,6 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
           <Text style={[styles.actionButtonText, { color: colors.background }]}>Edit Profile</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: colors.warning }]}
-          onPress={() => setShowPasswordModal(true)}
-        >
-          <Ionicons name="key" size={20} color={colors.background} />
-          <Text style={[styles.actionButtonText, { color: colors.background }]}>Change Password</Text>
-        </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.actionButton, { backgroundColor: colors.error }]}
@@ -322,11 +279,11 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
           <View style={styles.modalFooter}>
             <TouchableOpacity
               style={[styles.modalButton, { backgroundColor: colors.primary }]}
-              onPress={handleChangePassword}
+              onPress={() => Alert.alert('Info', 'Password change functionality has been disabled.')}
               disabled={loading}
             >
               <Text style={[styles.modalButtonText, { color: colors.background }]}>
-                {loading ? 'Changing...' : 'Change Password'}
+                Feature Disabled
               </Text>
             </TouchableOpacity>
             <TouchableOpacity

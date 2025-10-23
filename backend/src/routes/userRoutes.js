@@ -4,6 +4,7 @@ import {
   getUsers,
   getUserById,
   createUser,
+  adminCreateUser,
   updateUser,
   deleteUser,
   loginUser,
@@ -14,22 +15,27 @@ import {
 
 const router = express.Router();
 
+// Admin-only routes
 router.get("/", authenticateToken, requireRole(['admin']), getUsers);
 router.get("/:id", authenticateToken, requireRole(['admin']), getUserById);
-router.post("/", createUser);
+router.post("/admin-create", authenticateToken, requireRole(['admin']), adminCreateUser);
 router.put("/:id", authenticateToken, requireRole(['admin']), updateUser);
 router.delete("/:id", authenticateToken, requireRole(['admin']), deleteUser);
 
-// 📌 Login route
+// Public routes
+router.post("/", createUser);
 router.post("/login", loginUser);
+router.post("/forgot-password", requestPasswordReset);
 
-// 📌 Profile routes
+// 📌 Profile route (corrected)
+// All authenticated users can update their own profile.
+// Removed ":id" to match the frontend API call and rely on req.user.id from the token.
 router.put("/profile", authenticateToken, updateProfile);
 
-// 📌 Change password route (accessible to all authenticated users)
+// 📌 Change password route (corrected)
+// All authenticated users can change their own password.
+// Removed ":id" to match the frontend API call and rely on req.user.id from the token.
 router.put("/change-password", authenticateToken, changePassword);
 
-// 📌 Forgot password route
-router.post("/forgot-password", requestPasswordReset);
 
 export default router;

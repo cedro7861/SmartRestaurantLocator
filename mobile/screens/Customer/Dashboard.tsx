@@ -5,7 +5,7 @@ import * as Location from 'expo-location';
 import { Theme } from '../../lib/colors';
 import { getRestaurants, Restaurant } from '../../lib/api/restaurantApi';
 import { getCustomerOrders, Order } from '../../lib/api/orderApi';
-import { updateProfile, changePassword } from '../../lib/api/userApi';
+import { updateProfile } from '../../lib/api/userApi';
 
 type RestaurantWithDistance = Restaurant & { distance: number | null };
 
@@ -25,9 +25,6 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ navigation, user,
   const [profileName, setProfileName] = useState(user?.name || '');
   const [profileEmail, setProfileEmail] = useState(user?.email || '');
   const [profilePhone, setProfilePhone] = useState(user?.phone || '');
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [contactMessage, setContactMessage] = useState('');
   const [showLiveTracking, setShowLiveTracking] = useState<{[key: number]: boolean}>({});
   const [countdownTimers, setCountdownTimers] = useState<{[key: number]: number}>({});
@@ -136,32 +133,6 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ navigation, user,
     }
   };
 
-  const handleChangePassword = async () => {
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all password fields');
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      Alert.alert('Error', 'New password and confirmation do not match');
-      return;
-    }
-
-    if (newPassword.length < 6) {
-      Alert.alert('Error', 'New password must be at least 6 characters long');
-      return;
-    }
-
-    try {
-      await changePassword({ currentPassword, newPassword });
-      Alert.alert('Success', 'Password changed successfully');
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to change password');
-    }
-  };
 
   const handleContactSupport = async () => {
     if (!contactMessage.trim()) {
@@ -1088,39 +1059,6 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ navigation, user,
               </TouchableOpacity>
             </View>
 
-            <View style={styles.profileSection}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Change Password</Text>
-              <TextInput
-                style={[styles.input, { borderColor: colors.border, color: colors.text }]}
-                placeholder="Current Password"
-                placeholderTextColor={colors.textSecondary}
-                secureTextEntry
-                value={currentPassword}
-                onChangeText={setCurrentPassword}
-              />
-              <TextInput
-                style={[styles.input, { borderColor: colors.border, color: colors.text }]}
-                placeholder="New Password"
-                placeholderTextColor={colors.textSecondary}
-                secureTextEntry
-                value={newPassword}
-                onChangeText={setNewPassword}
-              />
-              <TextInput
-                style={[styles.input, { borderColor: colors.border, color: colors.text }]}
-                placeholder="Confirm New Password"
-                placeholderTextColor={colors.textSecondary}
-                secureTextEntry
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-              />
-              <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: colors.primary }]}
-                onPress={handleChangePassword}
-              >
-                <Text style={[styles.actionButtonText, { color: colors.background }]}>Change Password</Text>
-              </TouchableOpacity>
-            </View>
 
             <View style={styles.profileSection}>
               <Text style={[styles.sectionTitle, { color: colors.text }]}>Contact Support</Text>

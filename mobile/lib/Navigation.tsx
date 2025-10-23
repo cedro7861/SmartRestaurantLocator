@@ -28,13 +28,11 @@ import ViewRestaurants from "../screens/Owner/ViewRestaurants";
 import EditRestaurant from "../screens/Owner/EditRestaurant";
 import AddMenuItem from "../screens/Owner/AddMenuItem";
 import ManageOrders from "../screens/Owner/ManageOrders";
-import ChangePassword from "../screens/Owner/ChangePassword";
 import DeliveryManagement from "../screens/Owner/DeliveryManagement";
 import DeliveryDeliveriesTab from "../screens/Delivery/DeliveryDeliveriesTab";
 import DeliveryHistoryTab from "../screens/Delivery/DeliveryHistoryTab";
 import DeliveryEarningsTab from "../screens/Delivery/DeliveryEarningsTab";
 import DeliverySettingsTab from "../screens/Delivery/DeliverySettingsTab";
-import DeliveryChangePassword from "../screens/Delivery/DeliveryChangePassword";
 import DeliveryMapTab from "../screens/Delivery/DeliveryMapTab";
 import { DeliveryDashboard } from "../screens/Delivery";
 import HomeScreen from "../screens/Customer/HomeScreen";
@@ -44,7 +42,6 @@ import RestaurantDetail from "../screens/Customer/RestaurantDetail";
 import CustomerSettingsTab from "../screens/Customer/SettingsTab";
 import LogoutScreen from "../screens/Customer/LogoutScreen";
 import ProfileScreen from "../screens/Customer/ProfileScreen";
-import CustomerChangePassword from "../screens/Customer/CustomerChangePassword";
 import ContactSupport from "../screens/Customer/ContactSupport";
 import CustomerTermsConditions from "../screens/Customer/TermsConditions";
 import OwnerTermsConditions from "../screens/Owner/TermsConditions";
@@ -86,7 +83,7 @@ const AdminNavigator = () => {
         name="AdminUsersScreen"
         component={AdminUsersScreen}
         options={{
-          title: "Users",
+          title: "Manage Users",
           headerStyle: { backgroundColor: Theme.colors.surface },
           headerTintColor: "#fff",
           headerTitleStyle: { fontWeight: "bold" },
@@ -202,17 +199,6 @@ const OwnerNavigator = () => {
         )}
       </OwnerStack.Screen>
       <OwnerStack.Screen
-        name="ChangePassword"
-        component={ChangePassword}
-        options={{
-          title: "Change Password",
-          headerStyle: { backgroundColor: Theme.colors.surface },
-          headerTintColor: "#fff",
-          headerTitleStyle: { fontWeight: "bold" },
-          headerShown: true,
-        }}
-      />
-      <OwnerStack.Screen
         name="TermsConditions"
         options={{
           title: "Terms & Conditions",
@@ -294,17 +280,6 @@ const DeliveryNavigator = () => {
   return (
     <DeliveryStack.Navigator screenOptions={{ headerShown: false }}>
       <DeliveryStack.Screen name="MainTabs" component={DeliveryTabNavigator} />
-      <DeliveryStack.Screen
-        name="ChangePassword"
-        component={DeliveryChangePassword}
-        options={{
-          title: "Change Password",
-          headerStyle: { backgroundColor: Theme.colors.surface },
-          headerTintColor: "#fff",
-          headerTitleStyle: { fontWeight: "bold" },
-          headerShown: true,
-        }}
-      />
       <DeliveryStack.Screen
         name="DeliveryHistory"
         options={{
@@ -526,17 +501,6 @@ const CustomerNavigator = () => {
       >
         {(props: any) => <ProfileScreen {...props} user={user} />}
       </CustomerStack.Screen>
-      <CustomerStack.Screen
-        name="ChangePassword"
-        options={{
-          title: "Change Password",
-          headerStyle: { backgroundColor: Theme.colors.surface },
-          headerTintColor: "#fff",
-          headerTitleStyle: { fontWeight: "bold" },
-          headerShown: true,
-        }}
-        component={CustomerChangePassword}
-      />
       <CustomerStack.Screen
         name="ContactSupport"
         options={{

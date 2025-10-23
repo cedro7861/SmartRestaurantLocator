@@ -8,7 +8,7 @@ interface CustomerChangePasswordProps {
   navigation: any;
 }
 
-const CustomerChangePassword: React.FC<CustomerChangePasswordProps> = ({ navigation }) => {
+const CustomerChangePassword: React.FC<CustomerChangePasswordProps> = ({ navigation, user }) => {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -52,14 +52,9 @@ const CustomerChangePassword: React.FC<CustomerChangePasswordProps> = ({ navigat
       return;
     }
 
-    if (newPassword.length < 6) {
-      Alert.alert('Error', 'New password must be at least 6 characters long');
-      return;
-    }
-
     setLoading(true);
     try {
-      await changePassword({ currentPassword, newPassword });
+      await changePassword(user.id, { currentPassword, newPassword });
       Alert.alert('Success', 'Password changed successfully', [
         { text: 'OK', onPress: () => navigation.goBack() }
       ]);

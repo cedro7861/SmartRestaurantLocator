@@ -52,11 +52,6 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
       return;
     }
 
-    if (newPassword.length < 6) {
-      Alert.alert('Error', 'New password must be at least 6 characters long');
-      return;
-    }
-
     setLoading(true);
     try {
       await changePassword({ currentPassword, newPassword });

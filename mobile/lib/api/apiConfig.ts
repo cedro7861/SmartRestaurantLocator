@@ -4,5 +4,5 @@
 // For physical device: use your computer's IP address
 // For development: use 10.0.2.2 for Android emulator, localhost for iOS/web
 // For testing on same machine: use localhost
-const API_BASE_URL = 'http://192.168.35.110:3003/api';
+const API_BASE_URL = 'http://192.168.228.220:3003/api';
 export default API_BASE_URL;

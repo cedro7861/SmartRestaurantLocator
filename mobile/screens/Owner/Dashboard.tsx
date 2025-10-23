@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, FlatList, TextInput } from 'react-native';
 import { Theme } from '../../lib/colors';
 import { getOwnerMenuItems, MenuItem, updateMenuItem, deleteMenuItem } from '../../lib/api/menuApi';
-import { updateProfile, changePassword } from '../../lib/api/userApi';
+import { updateProfile } from '../../lib/api/userApi';
 import { getOwnerOrders, Order } from '../../lib/api/orderApi';
 import { getOwnerRestaurants, Restaurant } from '../../lib/api/restaurantApi';
 
@@ -26,9 +26,6 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ navigation, user, onLog
   const [profileName, setProfileName] = useState(user?.name || '');
   const [profileEmail, setProfileEmail] = useState(user?.email || '');
   const [profilePhone, setProfilePhone] = useState(user?.phone || '');
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [pushNotifications, setPushNotifications] = useState(true);
@@ -162,32 +159,6 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ navigation, user, onLog
     }
   };
 
-  const handleChangePassword = async () => {
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all password fields');
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      Alert.alert('Error', 'New password and confirmation do not match');
-      return;
-    }
-
-    if (newPassword.length < 6) {
-      Alert.alert('Error', 'New password must be at least 6 characters long');
-      return;
-    }
-
-    try {
-      await changePassword({ currentPassword, newPassword });
-      Alert.alert('Success', 'Password changed successfully');
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to change password');
-    }
-  };
 
   const calculateAnalytics = () => {
     const totalOrders = orders.length;
@@ -501,40 +472,6 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ navigation, user, onLog
               </TouchableOpacity>
             </View>
 
-            {/* Password Change */}
-            <View style={styles.settingsSection}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Change Password</Text>
-              <TextInput
-                style={[styles.input, { borderColor: colors.border, color: colors.text }]}
-                placeholder="Current Password"
-                placeholderTextColor={colors.textSecondary}
-                secureTextEntry
-                value={currentPassword}
-                onChangeText={setCurrentPassword}
-              />
-              <TextInput
-                style={[styles.input, { borderColor: colors.border, color: colors.text }]}
-                placeholder="New Password"
-                placeholderTextColor={colors.textSecondary}
-                secureTextEntry
-                value={newPassword}
-                onChangeText={setNewPassword}
-              />
-              <TextInput
-                style={[styles.input, { borderColor: colors.border, color: colors.text }]}
-                placeholder="Confirm New Password"
-                placeholderTextColor={colors.textSecondary}
-                secureTextEntry
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-              />
-              <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: colors.primary }]}
-                onPress={handleChangePassword}
-              >
-                <Text style={[styles.actionButtonText, { color: colors.background }]}>Change Password</Text>
-              </TouchableOpacity>
-            </View>
 
             {/* Notification Settings */}
             <View style={styles.settingsSection}>

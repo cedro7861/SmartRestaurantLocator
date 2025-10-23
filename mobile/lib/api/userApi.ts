@@ -12,6 +12,10 @@ api.interceptors.request.use(async (config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  // Ensure Content-Type is set for JSON requests
+  if (!config.headers['Content-Type']) {
+    config.headers['Content-Type'] = 'application/json';
+  }
   return config;
 });
 
@@ -63,11 +67,20 @@ export const deleteUser = async (id: number): Promise<void> => {
   await api.delete(`/users/${id}`);
 };
 
+export const adminCreateUser = async (data: {
+  name: string;
+  email: string;
+  phone?: string;
+  role?: string;
+}): Promise<{ message: string; user: User }> => {
+  const response = await api.post('/users/admin-create', data);
+  return response.data;
+};
+
 export const loginUser = async (loginData: LoginData): Promise<any> => {
   const response = await api.post('/users/login', loginData);
   return response.data;
 };
-
 export const updateProfile = async (data: {
   name?: string;
   email?: string;

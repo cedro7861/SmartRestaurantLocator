@@ -21,7 +21,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation, user }) => {
     }
 
     try {
-      const result = await updateProfile({
+      const result = await updateProfile(user.user_id, {
         name: profileName.trim(),
         email: profileEmail.trim(),
         phone: profilePhone.trim() || undefined,

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert, TextInput, S
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import { Theme } from '../../lib/colors';
-import { getUsers, User, changePassword } from '../../lib/api/userApi';
+import { getUsers, User } from '../../lib/api/userApi';
 import { getAllRestaurants, approveRestaurant, rejectRestaurant, updateRestaurant, Restaurant } from '../../lib/api/restaurantApi';
 import { getAllOrders, updateOrderStatus, Order } from '../../lib/api/orderApi';
 
@@ -20,9 +20,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigation, user, onLog
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [editingRestaurant, setEditingRestaurant] = useState<Restaurant | null>(null);
   const [editName, setEditName] = useState('');
   const [editLocation, setEditLocation] = useState('');
@@ -150,32 +147,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigation, user, onLog
     }
   };
 
-  const handleChangePassword = async () => {
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all password fields');
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      Alert.alert('Error', 'New password and confirmation do not match');
-      return;
-    }
-
-    if (newPassword.length < 6) {
-      Alert.alert('Error', 'New password must be at least 6 characters long');
-      return;
-    }
-
-    try {
-      await changePassword({ currentPassword, newPassword });
-      Alert.alert('Success', 'Password changed successfully');
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to change password');
-    }
-  };
 
   const handleEditRestaurant = (restaurant: Restaurant) => {
     setEditingRestaurant(restaurant);
@@ -606,15 +577,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigation, user, onLog
           </ScrollView>
         );
       case 'Users':
-        return loading ? (
-          <Text style={[styles.loadingText, { color: colors.text }]}>Loading users...</Text>
-        ) : (
-          <FlatList
-            data={users}
-            renderItem={renderUser}
-            keyExtractor={(item) => item.user_id?.toString() || Math.random().toString()}
-            contentContainerStyle={styles.listContainer}
-          />
+        return (
+          <View style={styles.settingsContainer}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>User Management</Text>
+            <Text style={[styles.placeholderText, { color: colors.textSecondary }]}>
+              Use the dedicated User Management screen for comprehensive user administration.
+            </Text>
+            <TouchableOpacity
+              style={[styles.button, { backgroundColor: colors.primary }]}
+              onPress={() => navigation.navigate('UserManagement')}
+            >
+              <Text style={[styles.buttonText, { color: colors.background }]}>Go to User Management</Text>
+            </TouchableOpacity>
+          </View>
         );
       case 'Restaurants':
         return loading ? (
@@ -681,37 +656,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigation, user, onLog
       case 'Settings':
         return (
           <View style={styles.settingsContainer}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Change Password</Text>
-            <TextInput
-              style={[styles.input, { borderColor: colors.border, color: colors.text }]}
-              placeholder="Current Password"
-              placeholderTextColor={colors.textSecondary}
-              secureTextEntry
-              value={currentPassword}
-              onChangeText={setCurrentPassword}
-            />
-            <TextInput
-              style={[styles.input, { borderColor: colors.border, color: colors.text }]}
-              placeholder="New Password"
-              placeholderTextColor={colors.textSecondary}
-              secureTextEntry
-              value={newPassword}
-              onChangeText={setNewPassword}
-            />
-            <TextInput
-              style={[styles.input, { borderColor: colors.border, color: colors.text }]}
-              placeholder="Confirm New Password"
-              placeholderTextColor={colors.textSecondary}
-              secureTextEntry
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-            />
-            <TouchableOpacity
-              style={[styles.button, { backgroundColor: colors.primary }]}
-              onPress={handleChangePassword}
-            >
-              <Text style={[styles.buttonText, { color: colors.background }]}>Change Password</Text>
-            </TouchableOpacity>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>System Settings</Text>
+            <Text style={[styles.placeholderText, { color: colors.textSecondary }]}>
+              System settings will be available here.
+            </Text>
           </View>
         );
       default:
